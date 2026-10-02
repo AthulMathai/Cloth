@@ -1,6 +1,7 @@
 // Runs every 10 minutes (see netlify.toml):
 //   * scheduled products/drops whose publish_at has passed go live
 //   * sold-out limited drops move to the archive after their archive_delay
+//   * unpaid checkouts past their hold time release their stock
 // Uses the service role, which never leaves the server.
 export default async () => {
   const url = process.env.SUPABASE_URL;
@@ -17,6 +18,7 @@ export default async () => {
   };
   const published = await call('publish_due_products');
   const archived = await call('archive_due_drops');
-  console.log(JSON.stringify({ published, archived }));
-  return new Response(JSON.stringify({ published, archived }), { headers: { 'Content-Type': 'application/json' } });
+  const expired = await call('expire_pending_orders');   // release stock from abandoned checkouts
+  console.log(JSON.stringify({ published, archived, expired }));
+  return new Response(JSON.stringify({ published, archived, expired }), { headers: { 'Content-Type': 'application/json' } });
 };

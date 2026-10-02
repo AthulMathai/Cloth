@@ -6,6 +6,7 @@ import { loadBoot } from './lib/store.js';
 import { runIntro } from './effects/intros.js';
 import { sound } from './effects/sound.js';
 import { track } from './lib/analytics.js';
+import { getBag, bagCount } from './lib/cart.js';
 
 const routes = [
   [/^\/$/,                          () => import('./pages/home.js')],
@@ -18,7 +19,11 @@ const routes = [
   [/^\/archive\/([a-z0-9-]+)\/?$/,  () => import('./pages/archive-drop.js'), ['slug']],
   [/^\/search\/?$/,                 () => import('./pages/search.js')],
   [/^\/account(?:\/(sign-in|sign-up))?\/?$/, () => import('./pages/account.js'), ['mode']],
-  [/^\/(custom|cart|checkout|orders|wishlist|designs)(?:\/.*)?$/, () => import('./pages/pending.js'), ['area']],
+  [/^\/cart\/?$/,                   () => import('./pages/cart.js')],
+  [/^\/checkout\/?$/,               () => import('./pages/checkout.js')],
+  [/^\/checkout\/pay\/([A-Za-z0-9-]+)\/?$/, () => import('./pages/pay.js'), ['number']],
+  [/^\/orders(?:\/([A-Za-z0-9-]+))?\/?$/, () => import('./pages/order.js'), ['number']],
+  [/^\/(custom|wishlist|designs)(?:\/.*)?$/, () => import('./pages/pending.js'), ['area']],
 ];
 
 const main = document.getElementById('main');
@@ -62,7 +67,8 @@ async function navigate(url, { push = true, initial = false } = {}) {
     main.innerHTML = page.html;
     renderHeader(u.pathname);
     window.scrollTo(0, 0);
-    cleanup = page.mount?.(main) || null;
+    const c = page.mount?.(main);
+    cleanup = typeof c === 'function' ? c : null;
     if (!initial) main.focus({ preventScroll: true });
   };
 
@@ -106,7 +112,7 @@ function renderHeader(path) {
       <a class="icon-btn" href="/search" aria-label="Search">${ICONS.search}</a>
       <button class="icon-btn" data-sound aria-pressed="${on}" aria-label="${on ? 'Mute transition sounds' : 'Turn transition sounds on'}">${on ? ICONS.soundOn : ICONS.soundOff}</button>
       <a class="icon-btn" href="/account" aria-label="${auth.user ? 'Your account' : 'Sign in'}">${ICONS.user}</a>
-      <a class="icon-btn" href="/cart" aria-label="Bag">${ICONS.bag}</a>
+      <a class="icon-btn bag-btn" href="/cart" aria-label="Bag${bagCount() ? `, ${bagCount()} items` : ''}">${ICONS.bag}${bagCount() ? `<span class="bag-count" aria-hidden="true">${bagCount()}</span>` : ''}</a>
     </div></div>`;
   h.querySelector('[data-sound]').onclick = () => { sound.enabled = !sound.enabled; renderHeader(location.pathname); };
   const menu = h.querySelector('.menu-btn'), nav = h.querySelector('.site-nav');
@@ -156,5 +162,7 @@ export function go(url) { return navigate(url); }
   } catch (e) { console.error(e); }
   renderFooter().catch(() => {});
   auth.onChange(() => renderHeader(location.pathname));
+  document.addEventListener('bag:change', () => renderHeader(location.pathname));
+  getBag().catch(() => {});
   await navigate(location.href, { initial: true });
 })();

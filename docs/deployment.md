@@ -20,7 +20,8 @@
 | `SUPABASE_SERVICE_ROLE_KEY` | **never** | used only by Netlify Functions |
 | `INTEGRATIONS_MODE` | yes | `mock` shows the development banner; `live` hides it |
 | `CRON_SECRET` | no | protects manually-triggered job endpoints |
-| `PAYMENT_PROVIDER`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | no | Phase 2 |
+| `PAYMENT_PROVIDER` | no | `mock` (default, test page) or `stripe` |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | no | needed when `PAYMENT_PROVIDER=stripe` (see docs/checkout.md) |
 | `AI_PROVIDER`, `MODERATION_PROVIDER`, `SHIPPING_PROVIDER`, `EMAIL_PROVIDER` | no | later phases; `mock` until real adapters are configured |
 
 `scripts/write-env.mjs` writes only the public values into

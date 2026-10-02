@@ -9,10 +9,10 @@ print-on-demand clothing brand. Hosted on **Netlify**, backed by **Supabase**.
 |---|---|---|
 | 1 | Foundation: schema, roles & permissions, RLS, audit log, analytics events, auth, theme engine, storefront | **Built** |
 | 2 | Products & variants, categories, collections, product pages | **Built** (read side) |
-| 2 | Cart, checkout, payments, taxes, shipping | Next |
+| 2 | Cart, checkout, payments (mock + Stripe adapter), taxes, shipping, discounts | **Built** — see docs/checkout.md |
 | 3 | Custom designer + dynamic pricing engine | Planned |
-| 4 | Orders, order history, customer tracking | Planned |
-| 5 | Limited drops, numbering, sold-out → archive | **Built** (DB + storefront); purchase flow arrives with checkout |
+| 4 | Orders, order history, customer tracking | **Partly built** (orders, append-only history, tracking page); fulfillment statuses arrive with Phase 7 |
+| 5 | Limited drops, numbering, sold-out → archive | **Built**, including purchase with reservation-safe numbering |
 | 6–10 | Moderation, fulfillment & partner portal, CRM, analytics dashboards, AI | Planned |
 
 ## Run it locally

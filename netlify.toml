@@ -23,6 +23,12 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# API: /api/<name> -> Netlify Function <name>
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
 # Single-page app: every unknown path renders index.html (functions excluded).
 [[redirects]]
   from = "/*"

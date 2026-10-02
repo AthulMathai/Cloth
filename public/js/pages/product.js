@@ -3,6 +3,7 @@ import { db } from '../lib/supabase.js';
 import { categoryById, themeForCategory, money, pad3, fmtDate } from '../lib/store.js';
 import { esc, garmentSVG, calloutSVG, priceHTML, startCountdowns } from '../components/ui.js';
 import { track } from '../lib/analytics.js';
+import { addToBag } from '../lib/cart.js';
 
 export async function load({ slug }) {
   const p = await db.from('storefront_products').select('*').eq('slug', slug).single().catch(() => null);
@@ -39,7 +40,8 @@ export async function load({ slug }) {
       <div><div class="option-label">Size</div><div class="sizes" data-sizes></div></div>
       <div class="form-msg" data-stock role="status"></div>
       <button class="btn" data-add disabled>Add to bag</button>
-      <p class="muted" style="font-size:14px;margin:0">Bag and checkout are being built next; this page already reads live stock.</p>`;
+      <p class="form-msg" data-added role="status"></p>
+      ${p.drop_id ? `<p class="muted" style="font-size:14px;margin:0">Limit ${p.max_per_order || 2} per order. Your edition numbers are assigned the moment payment is confirmed.</p>` : ''}`;
   }
 
   const html = `<div class="wrap pdp">
@@ -80,8 +82,18 @@ export async function load({ slug }) {
         const v = vs.find(x => x.size === size);
         const avail = v ? v.inventory_on_hand - v.inventory_reserved : 0;
         stockMsg.textContent = !v ? 'Pick a size.' : avail <= 0 ? 'Out of stock in this size.' : avail <= 5 ? `Only ${avail} left in ${v.size}.` : 'In stock.';
-        add.disabled = true; // enabled once the cart ships
-        if (v) add.textContent = `Add to bag · ${money(v.sale_price_cents ?? v.price_cents ?? p.price_cents)}`;
+        add.disabled = !v || avail <= 0 || !p.is_purchasable;
+        add.textContent = v ? `Add to bag · ${money(v.sale_price_cents ?? v.price_cents ?? p.price_cents)}` : 'Add to bag';
+        add.onclick = async () => {
+          if (!v) return;
+          const added = root.querySelector('[data-added]');
+          add.disabled = true;
+          try {
+            await addToBag(v.id, 1, { product: p.slug, limited: !!p.drop_id });
+            added.innerHTML = `Added ${esc(p.name)} (${esc(v.color)} / ${esc(v.size)}). <a href="/cart">View bag</a> or <a href="/checkout">check out</a>.`;
+          } catch (e) { added.textContent = e.message; }
+          add.disabled = false;
+        };
       };
       root.querySelectorAll('.swatch').forEach(b => b.onclick = () => {
         color = b.dataset.color; size = null;
