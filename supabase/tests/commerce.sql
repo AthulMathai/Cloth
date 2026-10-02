@@ -134,7 +134,8 @@ begin
   assert it.edition_numbers = array[v_sold0 + 1], 'edition number assigned: ' || coalesce(it.edition_numbers::text, 'null');
   assert (select count(*) from order_events where order_id = (o->>'order_id')::uuid) >= 4, 'history recorded';
   assert (select uses_count from discounts where code = 'DROP10') = 1, 'discount usage counted';
-  assert (select count(*) from cart_items ci join carts c on c.id = ci.cart_id where c.token_hash = token_hash((select v->>'token' from t where k = 'c1'))) = 0, 'bag emptied';
+  assert jsonb_array_length(cart_get((select v->>'token' from t where k = 'c1'))->'items') = 0, 'bag emptied';
+  assert (select status from carts where token_hash = token_hash((select v->>'token' from t where k = 'c1'))) = 'converted', 'cart closed';
 
   r2 := confirm_order_payment((o->>'order_id')::uuid, 'mock', 'mock_pi_001', (o->>'total_cents')::int, '{}');
   assert (r2->>'duplicate')::boolean, 'duplicate webhook ignored';

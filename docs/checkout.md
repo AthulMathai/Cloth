@@ -23,7 +23,7 @@ Abandoned / declined ▶ release_order() / expire_pending_orders() (every 10 min
 | Overselling | Stock is reserved with `UPDATE … WHERE on_hand - reserved >= qty`; the last piece can only be taken once. Tested with 6 simultaneous buyers for 2 limited pieces: exactly 2 succeeded. |
 | Duplicate orders (double click, retry) | Each checkout carries an idempotency key; a repeat returns the same order. |
 | Duplicate payments (webhook retries) | `payments` is unique per provider reference; `webhook_events` records each provider event once. |
-| Gaps in edition numbers | Numbers are assigned only when payment is confirmed, from reserved pieces, so abandoned checkouts never burn a number. |
+| Gaps in edition numbers | Numbers are assigned only when payment is confirmed (`claim_reserved_editions`), from reserved pieces, so abandoned checkouts never burn a number. |
 | Stock stuck in abandoned checkouts | Holds expire after 30 minutes (`expire_pending_orders`, run by `scheduled-lifecycle`). |
 | Payment arrives after the hold expired, or for the wrong amount | Order goes to `on_hold` with a note for staff instead of shipping unpaid/oversold goods. |
 | Lost history | `order_events` is append-only (update/delete raise errors); every status change is logged automatically. |

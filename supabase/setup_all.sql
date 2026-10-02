@@ -1287,46 +1287,22 @@ create trigger product_variants_stock_status after update of inventory_on_hand, 
 revoke execute on function public.refresh_product_stock_status() from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------
--- Edition allocation, now reservation-aware.
---   from_reservation = true : convert pieces held at checkout into
---                              numbered, sold pieces (payment confirmed)
---   from_reservation = false: direct allocation (admin/manual), must fit
---                              alongside outstanding reservations
+-- Edition allocation, now reservation-aware (no functions are dropped, so
+-- this migration is purely additive).
+--   allocate_editions(drop, qty, item)       direct allocation (admin /
+--                                             manual); must fit alongside
+--                                             outstanding reservations
+--   claim_reserved_editions(drop, qty, item) payment confirmed: convert
+--                                             pieces held at checkout into
+--                                             numbered, sold pieces
+-- Both share finish_edition_allocation() for numbering + sell-out.
 -- ---------------------------------------------------------------------
-drop function public.allocate_editions(uuid, int, uuid);
-create or replace function public.allocate_editions(
-  p_drop_id uuid, p_qty int, p_order_item_id uuid default null, p_from_reservation boolean default false)
+create or replace function public.finish_edition_allocation(p_drop_id uuid, p_after int, p_size int, p_qty int, p_order_item_id uuid)
 returns int[] language plpgsql security definer set search_path = public as $$
-declare
-  v_after int; v_size int; v_product uuid; v_status product_status; v_release timestamptz; v_numbers int[];
+declare v_numbers int[]; v_product uuid;
 begin
-  if p_qty is null or p_qty < 1 then raise exception 'quantity must be positive'; end if;
-
-  select d.product_id, p.status, d.release_at into v_product, v_status, v_release
-  from limited_drops d join products p on p.id = d.product_id where d.id = p_drop_id;
-  if not found then raise exception 'drop not found'; end if;
-
-  if p_from_reservation then
-    update limited_drops
-       set units_sold = units_sold + p_qty, units_reserved = units_reserved - p_qty
-     where id = p_drop_id and units_reserved >= p_qty and units_sold + p_qty <= edition_size
-    returning units_sold, edition_size into v_after, v_size;
-    if not found then raise exception 'no matching reservation for this drop' using errcode = 'check_violation'; end if;
-  else
-    if v_status <> 'active' then
-      raise exception 'drop is not purchasable (status %)', v_status using errcode = 'check_violation';
-    end if;
-    if v_release > now() then
-      raise exception 'drop has not been released yet' using errcode = 'check_violation';
-    end if;
-    update limited_drops
-       set units_sold = units_sold + p_qty
-     where id = p_drop_id and units_sold + units_reserved + p_qty <= edition_size
-    returning units_sold, edition_size into v_after, v_size;
-    if not found then raise exception 'not enough editions remaining' using errcode = 'check_violation'; end if;
-  end if;
-
-  select array_agg(n order by n) into v_numbers from generate_series(v_after - p_qty + 1, v_after) n;
+  select product_id into v_product from limited_drops where id = p_drop_id;
+  select array_agg(n order by n) into v_numbers from generate_series(p_after - p_qty + 1, p_after) n;
   insert into edition_allocations (drop_id, edition_number, order_item_id)
   select p_drop_id, n, p_order_item_id from unnest(v_numbers) n;
 
@@ -1335,14 +1311,51 @@ begin
            (select coalesce(sale_price_cents, base_price_cents) from products where id = v_product))
    where id = p_drop_id;
 
-  if v_after >= v_size then
+  if p_after >= p_size then
     update limited_drops set sold_out_at = now() where id = p_drop_id;
     update products set status = 'sold_out' where id = v_product;
     perform archive_due_drops();
   end if;
   return v_numbers;
 end $$;
-revoke execute on function public.allocate_editions(uuid, int, uuid, boolean) from public, anon, authenticated;
+revoke execute on function public.finish_edition_allocation(uuid, int, int, int, uuid) from public, anon, authenticated;
+
+create or replace function public.allocate_editions(p_drop_id uuid, p_qty int, p_order_item_id uuid default null)
+returns int[] language plpgsql security definer set search_path = public as $$
+declare v_after int; v_size int; v_status product_status; v_release timestamptz;
+begin
+  if p_qty is null or p_qty < 1 then raise exception 'quantity must be positive'; end if;
+  select p.status, d.release_at into v_status, v_release
+  from limited_drops d join products p on p.id = d.product_id where d.id = p_drop_id;
+  if not found then raise exception 'drop not found'; end if;
+  if v_status <> 'active' then
+    raise exception 'drop is not purchasable (status %)', v_status using errcode = 'check_violation';
+  end if;
+  if v_release > now() then
+    raise exception 'drop has not been released yet' using errcode = 'check_violation';
+  end if;
+  update limited_drops
+     set units_sold = units_sold + p_qty
+   where id = p_drop_id and units_sold + units_reserved + p_qty <= edition_size
+  returning units_sold, edition_size into v_after, v_size;
+  if not found then raise exception 'not enough editions remaining' using errcode = 'check_violation'; end if;
+  return finish_edition_allocation(p_drop_id, v_after, v_size, p_qty, p_order_item_id);
+end $$;
+revoke execute on function public.allocate_editions(uuid, int, uuid) from public, anon, authenticated;
+
+create or replace function public.claim_reserved_editions(p_drop_id uuid, p_qty int, p_order_item_id uuid)
+returns int[] language plpgsql security definer set search_path = public as $$
+declare v_after int; v_size int;
+begin
+  if p_qty is null or p_qty < 1 then raise exception 'quantity must be positive'; end if;
+  update limited_drops
+     set units_sold = units_sold + p_qty, units_reserved = units_reserved - p_qty
+   where id = p_drop_id and units_reserved >= p_qty and units_sold + p_qty <= edition_size
+  returning units_sold, edition_size into v_after, v_size;
+  if not found then raise exception 'no matching reservation for this drop' using errcode = 'check_violation'; end if;
+  return finish_edition_allocation(p_drop_id, v_after, v_size, p_qty, p_order_item_id);
+end $$;
+revoke execute on function public.claim_reserved_editions(uuid, int, uuid) from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------
 -- Storefront view: remaining = size - sold - reserved
@@ -1825,7 +1838,7 @@ begin
     select it.variant_id, -it.quantity, -it.quantity, 'sale', o.number, inventory_on_hand from product_variants where id = it.variant_id;
 
     if it.drop_id is not null then
-      v_numbers := allocate_editions(it.drop_id, it.quantity, it.id, true);
+      v_numbers := claim_reserved_editions(it.drop_id, it.quantity, it.id);
       update order_items set edition_numbers = v_numbers where id = it.id;
       insert into analytics_events (event_type, user_id, entity_type, entity_id, properties)
       values ('limited_drop_purchase', o.user_id, 'limited_drop', it.drop_id::text, jsonb_build_object('editions', v_numbers, 'order', o.number));
@@ -1838,8 +1851,9 @@ begin
     update discounts set uses_count = uses_count + 1 where id = o.discount_id;
   end if;
 
+  -- The paid bag is closed (its lines stay as a record); the customer's next
+  -- add-to-bag starts a fresh open cart.
   update carts set status = 'converted' where id = o.cart_id;
-  delete from cart_items where cart_id = o.cart_id;
 
   perform set_config('app.actor_type', 'provider', true);
   update orders set status = 'paid', paid_at = now(), payment_provider = p_provider, payment_ref = p_provider_ref, reserved_until = null
