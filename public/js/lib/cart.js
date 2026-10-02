@@ -41,6 +41,19 @@ export async function addToBag(variantId, qty = 1, meta = {}) {
   return items;
 }
 
+export async function setLine(itemId, quantity) {
+  const r = await db.rpc('cart_set_line', { p_token: cartToken(), p_item_id: itemId, p_quantity: quantity });
+  if (r.token) saveToken(r.token);
+  emit(r.items);
+  return r.items;
+}
+
+export async function addDesignToBag(designId, qty) {
+  const r = await db.rpc('cart_add_design', { p_token: cartToken(), p_design_id: designId, p_quantity: qty });
+  emit(r.items);
+  return r.items;
+}
+
 export async function removeFromBag(variantId) {
   const items = await setItem(variantId, 0, 'set');
   track('remove_from_cart', { entity_type: 'variant', entity_id: variantId });

@@ -23,7 +23,9 @@ const routes = [
   [/^\/checkout\/?$/,               () => import('./pages/checkout.js')],
   [/^\/checkout\/pay\/([A-Za-z0-9-]+)\/?$/, () => import('./pages/pay.js'), ['number']],
   [/^\/orders(?:\/([A-Za-z0-9-]+))?\/?$/, () => import('./pages/order.js'), ['number']],
-  [/^\/(custom|wishlist|designs)(?:\/.*)?$/, () => import('./pages/pending.js'), ['area']],
+  [/^\/custom(?:\/([0-9a-f-]{36}))?\/?$/, () => import('./pages/custom.js'), ['id']],
+  [/^\/designs\/?$/,                () => import('./pages/designs.js')],
+  [/^\/(wishlist)(?:\/.*)?$/,       () => import('./pages/pending.js'), ['area']],
 ];
 
 const main = document.getElementById('main');

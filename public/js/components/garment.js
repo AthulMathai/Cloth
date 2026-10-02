@@ -24,9 +24,18 @@ const DETAILS = {
   tank: ['M58,312 L240,312'],
 };
 
-export function garmentPaths(type) {
+// Back view: same silhouette, back neckline / hood, no pocket or drawstrings.
+const DETAILS_BACK = {
+  tee: ['M100,22 C114,32 186,32 200,22', 'M60,312 L240,312'],
+  longsleeve: ['M100,22 C114,32 186,32 200,22', 'M42,296 L8,290', 'M258,296 L292,290'],
+  crewneck: ['M98,24 C112,36 188,36 202,24', 'M58,308 L242,308', 'M10,292 L44,300', 'M290,292 L256,300'],
+  hoodie: ['M96,40 C82,-6 218,-6 204,40 C190,58 110,58 96,40 Z', 'M150,0 L150,50', 'M58,306 L242,306', 'M10,300 L46,306', 'M290,300 L254,306'],
+  tank: ['M104,22 C112,40 188,40 196,22', 'M58,312 L240,312'],
+};
+
+export function garmentPaths(type, view = 'front') {
   const t = BODY[type] ? type : 'tee';
-  return { body: BODY[t], details: DETAILS[t] };
+  return { body: BODY[t], details: (view === 'back' ? DETAILS_BACK : DETAILS)[t] };
 }
 
 let fid = 0;
@@ -35,8 +44,8 @@ let fid = 0;
  * mode 'sketch': ballpoint lines on paper (artist theme)
  * mode 'flat':   filled garment in the variant colour
  */
-export function garmentSVG({ type = 'tee', color = '#141414', mode = 'flat', label = '' } = {}) {
-  const { body, details } = garmentPaths(type);
+export function garmentSVG({ type = 'tee', color = '#141414', mode = 'flat', label = '', view = 'front' } = {}) {
+  const { body, details } = garmentPaths(type, view);
   const id = `g${++fid}`;
   const dark = isDark(color);
   if (mode === 'sketch') {

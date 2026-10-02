@@ -22,7 +22,7 @@
 | `CRON_SECRET` | no | protects manually-triggered job endpoints |
 | `PAYMENT_PROVIDER` | no | `mock` (default, test page) or `stripe` |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | no | needed when `PAYMENT_PROVIDER=stripe` (see docs/checkout.md) |
-| `AI_PROVIDER`, `MODERATION_PROVIDER`, `SHIPPING_PROVIDER`, `EMAIL_PROVIDER` | no | later phases; `mock` until real adapters are configured |
+| `AI_PROVIDER`, `MODERATION_PROVIDER`, `SHIPPING_PROVIDER`, `EMAIL_PROVIDER` | no | `mock` until real adapters are configured. Design moderation uses the built-in checks; with `INTEGRATIONS_MODE=live` images are sent to human review rather than auto-approved |
 
 `scripts/write-env.mjs` writes only the public values into
 `public/js/lib/env.js` at build time. That file is git-ignored.

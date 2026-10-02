@@ -39,7 +39,7 @@ export async function load({ number }, query) {
   if (token) try { sessionStorage.setItem(`th8rty.order.${o.number}`, token); } catch {}
 
   const reached = new Set(o.events.map(e => e.status));
-  const custom = false; // custom designs arrive in Phase 3
+  const custom = o.items.some(i => i.item_type === 'custom');
   const steps = STEPS.filter(s => s[3] !== 'custom' || custom);
   const lastIdx = steps.reduce((acc, s, i) => s[2].some(st => reached.has(st)) ? i : acc, -1);
   const stopped = ['cancelled', 'failed', 'refunded', 'returned', 'on_hold'].includes(o.status);
@@ -66,6 +66,7 @@ export async function load({ number }, query) {
             <span class="bag-thumb">${garmentSVG({ type: i.product_type, color: i.color_hex, mode: 'flat', label: i.name })}</span>
             <div class="bag-info"><span class="bag-name">${esc(i.name)}</span>
               <span class="muted">${esc(i.color || '')} / ${esc(i.size || '')} · Qty ${i.quantity}</span>
+              ${i.item_type === 'custom' ? `<span class="muted small">Custom design · ${(i.print || []).map(x => `${esc(x.label)} (${esc(x.method)})`).join(' + ')}${i.one_time_cents ? ` · includes ${money(i.one_time_cents)} one-time fees` : ''}</span>` : ''}
               ${i.edition_numbers?.length ? `<span class="edition-tag">Edition ${i.edition_numbers.map(n => `No. ${pad3(n)} / ${i.edition_size}`).join(', ')}</span>` : ''}
             </div><span class="bag-price">${money(i.line_total_cents)}</span></li>`).join('')}</ul>
         </div>

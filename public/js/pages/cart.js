@@ -1,6 +1,7 @@
 // /cart — the bag.
 import { themeForPage, money } from '../lib/store.js';
-import { getBag, setItem, removeFromBag, quote } from '../lib/cart.js';
+import { getBag, setLine, quote } from '../lib/cart.js';
+import { storage } from '../lib/supabase.js';
 import { esc, garmentSVG } from '../components/ui.js';
 
 export async function load() {
@@ -28,13 +29,17 @@ export async function load() {
           return;
         }
         const blocked = items.some(i => i.issue && !/^Only|^Limit/.test(i.issue));
+        const thumbs = await storage.sign('mockups', items.filter(i => i.item_type === 'custom').map(i => i.mockups?.front)).catch(() => ({}));
         host.innerHTML = `
           <ul class="bag-lines panel-box">${items.map(i => `
-            <li class="bag-line" data-variant="${i.variant_id}">
-              <a class="bag-thumb" href="/product/${esc(i.product_slug)}">${garmentSVG({ type: i.product_type, color: i.color_hex, mode: 'flat', label: i.name })}</a>
+            <li class="bag-line" data-item="${i.item_id}">
+              <a class="bag-thumb" href="${i.item_type === 'custom' ? `/custom/${i.design_id}` : `/product/${esc(i.product_slug)}`}">${
+                i.item_type === 'custom' && thumbs[i.mockups?.front] ? `<img src="${thumbs[i.mockups.front]}" alt="">` : garmentSVG({ type: i.product_type, color: i.color_hex, mode: 'flat', label: i.name })}</a>
               <div class="bag-info">
-                <a class="bag-name" href="/product/${esc(i.product_slug)}">${esc(i.name)}</a>
+                <a class="bag-name" href="${i.item_type === 'custom' ? `/custom/${i.design_id}` : `/product/${esc(i.product_slug)}`}">${esc(i.name)}</a>
                 <span class="muted">${esc(i.color || '')}${i.size ? ' / ' + esc(i.size) : ''}${i.is_limited ? ` · Limited, numbered at payment` : ''}</span>
+                ${i.item_type === 'custom' && i.pricing?.print ? `<span class="muted small">${i.pricing.print.map(x => `${esc(x.placement_label)} (${esc(x.method_label)})`).join(' + ')} · ${money(i.unit_price_cents)} each${i.one_time_cents ? ` + ${money(i.one_time_cents)} one-time` : ''}</span>` : ''}
+                ${i.item_type === 'custom' && i.pricing?.next_tier ? `<span class="small">Add ${i.pricing.next_tier.add_qty} more for ${money(i.pricing.next_tier.per_unit_discount_cents)} off each</span>` : ''}
                 ${i.issue ? `<span class="bag-issue" role="status">${esc(i.issue)}</span>` : ''}
               </div>
               <div class="qty" role="group" aria-label="Quantity for ${esc(i.name)}">
@@ -63,13 +68,13 @@ export async function load() {
           </aside>`;
 
         host.querySelectorAll('.bag-line').forEach(li => {
-          const v = li.dataset.variant, item = items.find(i => i.variant_id === v);
+          const id = li.dataset.item, item = items.find(i => i.item_id === id);
           li.querySelectorAll('[data-step]').forEach(b => b.onclick = async () => {
             b.disabled = true;
-            try { await setItem(v, Math.max(0, item.quantity + Number(b.dataset.step))); } catch (e) { alert(e.message); }
+            try { await setLine(id, Math.max(0, item.quantity + Number(b.dataset.step))); } catch (e) { li.querySelector('.bag-info').insertAdjacentHTML('beforeend', `<span class="bag-issue">${esc(e.message)}</span>`); }
             render();
           });
-          li.querySelector('[data-remove]').onclick = async () => { await removeFromBag(v); render(); };
+          li.querySelector('[data-remove]').onclick = async () => { await setLine(id, 0); render(); };
         });
         host.querySelector('[data-code]').onsubmit = (e) => { e.preventDefault(); code = e.target.code.value.trim().toUpperCase(); render(); };
         host.querySelector('[data-blocked]')?.addEventListener('click', (e) => e.preventDefault());

@@ -129,6 +129,41 @@ export const auth = {
   },
 };
 
+// ---- Storage (private buckets use the signed-in user's JWT) ------------
+const encPath = (p) => p.split('/').map(encodeURIComponent).join('/');
+
+export const storage = {
+  async upload(bucket, path, blob, contentType) {
+    await maybeRefresh();
+    if (!session?.access_token) throw new DbError(401, { message: 'Sign in to upload.' });
+    const res = await fetch(`${env.SUPABASE_URL}/storage/v1/object/${bucket}/${encPath(path)}`, {
+      method: 'POST',
+      headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: `Bearer ${session.access_token}`,
+                 'Content-Type': contentType || blob.type || 'application/octet-stream', 'x-upsert': 'true', 'cache-control': '3600' },
+      body: blob,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new DbError(res.status, { message: body.message || body.error || `Upload failed (${res.status})` });
+    }
+    return path;
+  },
+  /** Short-lived links for private files. Returns { path: url }. */
+  async sign(bucket, paths, expiresIn = 3600) {
+    const list = [...new Set(paths.filter(Boolean))];
+    if (!list.length || !session?.access_token) return {};
+    await maybeRefresh();
+    const res = await fetch(`${env.SUPABASE_URL}/storage/v1/object/sign/${bucket}`, {
+      method: 'POST',
+      headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiresIn, paths: list }),
+    });
+    if (!res.ok) return {};
+    const rows = await res.json();
+    return Object.fromEntries(rows.filter(r => r.signedURL).map(r => [r.path, `${env.SUPABASE_URL}/storage/v1${r.signedURL}`]));
+  },
+};
+
 export function storageUrl(bucket, path) {
   return `${env.SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 }
