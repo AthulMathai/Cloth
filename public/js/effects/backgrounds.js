@@ -11,6 +11,7 @@ const registry = {
   'anime-sky': animeSky,
   'grain': grain,
   'light-rays': lightRays,
+  'cyber-rain': cyberRain,
   'none': () => () => {},
 };
 
@@ -122,6 +123,55 @@ function grain(host) {
 function lightRays(host) {
   host.append(el('div', 'fx-rays'), el('div', 'fx-rays fx-rays--2'), el('div', 'fx-glow'));
   return () => {};
+}
+
+// ---------------------------------------------------------------------
+// Cyber rain: falling columns of katakana + hex glyphs over a neon
+// perspective grid that scrolls toward the viewer (grid is CSS).
+// ---------------------------------------------------------------------
+function cyberRain(host, theme) {
+  host.append(el('div', 'fx-horizon'), el('div', 'fx-grid'));
+  const canvas = document.createElement('canvas');
+  host.append(canvas, el('div', 'fx-scanlines'), el('div', 'fx-vignette'));
+  const ctx = canvas.getContext('2d');
+  const GLYPHS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワン0123456789ABCDEF<>/#';
+  const SIZE = 16;
+  const cyan = theme.colors.accent, magenta = theme.colors.accent2;
+  let W = 0, H = 0, cols = [];
+  const resize = () => {
+    W = canvas.width = innerWidth; H = canvas.height = innerHeight;
+    cols = Array.from({ length: Math.ceil(W / (SIZE * 1.15)) }, () => ({
+      y: Math.random() * -H, speed: 0.6 + Math.random() * 1.6, hot: Math.random() < 0.12,
+      on: Math.random() < 0.55,   // not every column rains: keeps it readable
+    }));
+    ctx.fillStyle = theme.colors.bg; ctx.fillRect(0, 0, W, H);
+  };
+  resize();
+  const stop = loop(30, () => {
+    ctx.fillStyle = hexToRgba(theme.colors.bg, 0.16);
+    ctx.fillRect(0, 0, W, H);
+    ctx.font = `${SIZE}px 'Dela Gothic One', 'Share Tech Mono', monospace`;
+    cols.forEach((c, i) => {
+      if (!c.on) { if (Math.random() < 0.002) c.on = true; return; }
+      const x = i * SIZE * 1.15;
+      const ch = GLYPHS[(Math.random() * GLYPHS.length) | 0];
+      ctx.fillStyle = '#e8feff';                                  // bright head
+      ctx.fillText(ch, x, c.y);
+      ctx.fillStyle = c.hot ? magenta : cyan;                     // trail glyph
+      ctx.globalAlpha = 0.75;
+      ctx.fillText(GLYPHS[(Math.random() * GLYPHS.length) | 0], x, c.y - SIZE);
+      ctx.globalAlpha = 1;
+      c.y += SIZE * c.speed * 0.6;
+      if (c.y > H + Math.random() * 400) { c.y = -SIZE * (Math.random() * 20); c.on = Math.random() < 0.6; }
+    });
+  });
+  addEventListener('resize', resize);
+  return () => { stop(); removeEventListener('resize', resize); };
+}
+
+function hexToRgba(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${n >> 16 & 255}, ${n >> 8 & 255}, ${n & 255}, ${a})`;
 }
 
 function el(tag, cls) { const n = document.createElement(tag); n.className = cls; return n; }

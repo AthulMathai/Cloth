@@ -10,19 +10,19 @@ world by editing data — no code, no separate sites.
 {
   "colors":     { "bg", "fg", "muted", "accent", "accent2", "surface", "surface_fg", "line" },
   "fonts":      { "display", "body", "bodyStyle": "normal|italic", "hand", "script" },
-  "background": { "effect": "tv-static|anime-sky|grain|light-rays|none", "intensity": 0..1 },
-  "hero":       { "style": "varsity-arch|script|manga-slash|stacked|serif-centered" },
-  "intro":      { "effect": "petal-storm|static-cut|glitch|light-bloom|fade|none",
-                  "sound": "anime-whoosh|tv-click|bass-hit|chime|null", "duration_ms": 1900 },
-  "cards":      { "style": "sketch-callout|manga-panel|sticker|gallery|plain" },
-  "buttons":    { "style": "varsity-outline|slash|solid|ghost" },
+  "background": { "effect": "tv-static|anime-sky|cyber-rain|grain|light-rays|none", "intensity": 0..1 },
+  "hero":       { "style": "varsity-arch|script|manga-slash|holo|stacked|serif-centered" },
+  "intro":      { "effect": "petal-storm|static-cut|boot-sequence|glitch|light-bloom|fade|none",
+                  "sound": "anime-whoosh|tv-click|synth-boot|bass-hit|chime|null", "duration_ms": 1900 },
+  "cards":      { "style": "sketch-callout|manga-panel|hud|sticker|gallery|plain" },
+  "buttons":    { "style": "varsity-outline|slash|chamfer|solid|ghost" },
   "motion":     { "level": "calm|normal|energetic" }
 }
 ```
 
 Font keys come from the registry in `public/js/lib/theme.js` (only fonts that
 ship with the site): `anton`, `monsieur`, `pinyon`, `inter`, `marker`, `dela`,
-`cormorant`, `mono`.
+`cormorant`, `mono`, `orbitron`, `sharetech`.
 
 ## The seeded worlds
 
@@ -30,6 +30,7 @@ ship with the site): `anton`, `monsieur`, `pinyon`, `inter`, `marker`, `dela`,
 |---|---|---|---|
 | **th8rty** (home, the artist) | live TV static with scanlines and rolling band | static flood → CRT switch-off, channel click | paper sketch scraps; product notes in hand-drawn ovals with arrows |
 | **anime** | dusk sky, rising sun with speed lines, outlined brush kanji, drifting petals | blade slash → petal vortex → petals rush past the camera, blade + gust + shimmer sound | manga panels with halftone |
+| **cyberpunk** | falling katakana/hex data rain over a neon perspective grid | terminal boot log → scan line → screen splits open, synth power-up | chamfered HUD panels with neon edges |
 | **streetwear** | film grain | glitch slices, bass hit | die-cut stickers |
 | **faith** | slow light rays | light bloom, soft chime | framed gallery |
 | **minimal** | none | fade | plain |

@@ -9,7 +9,7 @@ export default async () => {
   const call = async (fn) => {
     const r = await fetch(`${url}/rest/v1/rpc/${fn}`, {
       method: 'POST',
-      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      headers: { apikey: key, ...(key.startsWith('eyJ') ? { Authorization: `Bearer ${key}` } : {}), 'Content-Type': 'application/json' },
       body: '{}',
     });
     if (!r.ok) throw new Error(`${fn} failed: ${r.status} ${await r.text()}`);

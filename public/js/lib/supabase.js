@@ -17,7 +17,10 @@ const listeners = new Set();
 
 function headers(extra = {}) {
   const h = { apikey: env.SUPABASE_ANON_KEY, 'Content-Type': 'application/json', ...extra };
-  h.Authorization = `Bearer ${session?.access_token || env.SUPABASE_ANON_KEY}`;
+  // Legacy anon keys are JWTs and go in Authorization too; the newer
+  // publishable keys (sb_publishable_…) must only be sent as apikey.
+  const bearer = session?.access_token || (env.SUPABASE_ANON_KEY.startsWith('eyJ') ? env.SUPABASE_ANON_KEY : null);
+  if (bearer) h.Authorization = `Bearer ${bearer}`;
   return h;
 }
 

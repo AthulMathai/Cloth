@@ -15,6 +15,8 @@
 @font-face { font-family: 'Dela Gothic One'; src: url(/assets/fonts/dela.woff) format('woff'); font-display: swap; }
 @font-face { font-family: 'Cormorant Garamond'; src: url(/assets/fonts/cormorant.woff) format('woff'); font-weight: 300 700; font-display: swap; }
 @font-face { font-family: 'Cormorant Garamond'; src: url(/assets/fonts/cormorant-italic.woff) format('woff'); font-weight: 300 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Orbitron'; src: url(/assets/fonts/orbitron.woff) format('woff'); font-weight: 400 900; font-display: swap; }
+@font-face { font-family: 'Share Tech Mono'; src: url(/assets/fonts/sharetech.woff) format('woff'); font-display: swap; }
 @font-face { font-family: 'Space Mono'; src: url(/assets/fonts/mono.woff) format('woff'); font-display: swap; }
 @font-face { font-family: 'Space Mono'; src: url(/assets/fonts/mono-bold.woff) format('woff'); font-weight: 700; font-display: swap; }
 
@@ -396,3 +398,81 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 400; line-height: 1;
 [data-cards="manga-panel"] .card-media { background-image:
   radial-gradient(circle at 70% 30%, color-mix(in srgb, var(--accent) 35%, transparent), transparent 60%),
   radial-gradient(var(--line) 1.2px, transparent 1.6px); background-size: auto, 8px 8px; }
+
+/* =====================================================================
+   Cyberpunk world
+   ===================================================================== */
+.bg-cyber-rain { background: var(--bg); }
+.bg-cyber-rain canvas { opacity: calc(.35 + var(--fx-intensity) * .4); }
+.fx-horizon { position: absolute; left: 0; right: 0; top: 52%; height: 30vh; translate: 0 -50%;
+  background: radial-gradient(60% 50% at 50% 50%, color-mix(in srgb, var(--accent-2) 45%, transparent), transparent 70%); }
+.fx-grid { position: absolute; left: -50%; right: -50%; bottom: -10%; height: 55vh; transform-origin: 50% 0;
+  transform: perspective(380px) rotateX(62deg);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--accent-2) 70%, transparent) 2px, transparent 2px),
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, transparent) 2px, transparent 2px);
+  background-size: 60px 60px; animation: gridrun 1.6s linear infinite;
+  mask: linear-gradient(transparent, #000 35%); -webkit-mask: linear-gradient(transparent, #000 35%); }
+@keyframes gridrun { to { background-position: 0 60px, 0 0; } }
+[data-motion="reduced"] .fx-grid { animation: none; }
+
+.hero--holo { place-items: end start; text-align: left; min-height: min(92svh, 900px); }
+.hero--holo .hero-inner { justify-items: start; max-width: var(--max); margin-inline: auto; }
+.holo-readout { font: 14px/1 'Share Tech Mono', monospace; color: var(--accent); letter-spacing: .1em; }
+.holo-readout::before { content: '◢ '; color: var(--accent-2); }
+.holo-title { position: relative; font-family: 'Orbitron', sans-serif; font-weight: 900; text-transform: uppercase;
+  font-size: clamp(54px, 11vw, 168px); line-height: .9; letter-spacing: .02em; color: #eafcff;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 70%, transparent), 0 0 60px color-mix(in srgb, var(--accent) 35%, transparent); }
+.holo-title::before, .holo-title::after { content: attr(data-text); position: absolute; inset: 0; pointer-events: none; }
+.holo-title::before { color: var(--accent); translate: -3px 0; clip-path: inset(10% 0 62% 0); animation: holo1 3.2s steps(1) infinite; mix-blend-mode: screen; }
+.holo-title::after  { color: var(--accent-2); translate: 3px 0; clip-path: inset(58% 0 14% 0); animation: holo2 2.7s steps(1) infinite; mix-blend-mode: screen; }
+@keyframes holo1 { 0%,86% { clip-path: inset(10% 0 62% 0); translate: -3px 0; } 88% { clip-path: inset(40% 0 30% 0); translate: -14px 0; } 92% { clip-path: inset(70% 0 5% 0); translate: 9px 0; } 96% { clip-path: inset(5% 0 80% 0); translate: -6px 0; } }
+@keyframes holo2 { 0%,80% { clip-path: inset(58% 0 14% 0); translate: 3px 0; } 84% { clip-path: inset(20% 0 55% 0); translate: 12px 0; } 90% { clip-path: inset(80% 0 2% 0); translate: -10px 0; } }
+[data-motion="reduced"] .holo-title::before, [data-motion="reduced"] .holo-title::after { animation: none; }
+.holo-jp { font-family: 'Dela Gothic One', sans-serif; font-size: clamp(18px, 2.4vw, 30px); color: var(--accent-2); letter-spacing: .3em;
+  text-shadow: 0 0 12px var(--accent-2); }
+[data-theme="cyberpunk"] .lede { font-family: 'Share Tech Mono', monospace; }
+[data-theme="cyberpunk"] .h-section { font-family: 'Orbitron', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: .02em;
+  text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 60%, transparent); }
+[data-theme="cyberpunk"] .chip { border-color: var(--accent); color: var(--accent); font-family: 'Share Tech Mono', monospace; }
+
+/* HUD cards: chamfered panels with glowing corner brackets */
+[data-cards="hud"] .card { --cut: 16px; padding: 1px; background: linear-gradient(135deg, var(--accent), transparent 40%, transparent 60%, var(--accent-2));
+  clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); }
+[data-cards="hud"] .card > * { background: var(--surface); }
+[data-cards="hud"] .card-media { background:
+  linear-gradient(color-mix(in srgb, var(--accent) 10%, transparent) 1px, transparent 1px) 0 0 / 22px 22px,
+  linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent) 1px, transparent 1px) 0 0 / 22px 22px,
+  radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 65%), var(--surface);
+  clip-path: polygon(15px 0, 100% 0, 100% 100%, 0 100%, 0 15px); }
+[data-cards="hud"] .card-body { padding: 12px 14px 16px; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%); }
+[data-cards="hud"] .card-name { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: .04em; }
+[data-cards="hud"] .card-price { font-family: 'Share Tech Mono', monospace; color: var(--accent); }
+[data-cards="hud"] .badge { background: var(--accent-2); color: #fff; font-family: 'Share Tech Mono', monospace; font-weight: 400; }
+[data-cards="hud"] .card:hover { background: linear-gradient(135deg, var(--accent-2), var(--accent)); }
+[data-theme="cyberpunk"] .drop { border-color: var(--accent); box-shadow: inset 0 0 30px color-mix(in srgb, var(--accent) 15%, transparent); }
+[data-theme="cyberpunk"] .drop-name { font-family: 'Orbitron', sans-serif; font-weight: 800; text-transform: uppercase; font-size: clamp(22px, 2.4vw, 32px); }
+[data-theme="cyberpunk"] .meter > span { background: linear-gradient(90deg, var(--accent), var(--accent-2)); box-shadow: 0 0 10px var(--accent); }
+
+/* chamfered neon buttons */
+[data-buttons="chamfer"] .btn:not(.btn--quiet) { border: 0; background: var(--accent); color: #05060b; font-family: 'Orbitron', sans-serif; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .08em; padding-inline: 30px;
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 60%, transparent); }
+[data-buttons="chamfer"] .btn:not(.btn--quiet):hover { background: var(--accent-2); color: #fff; }
+
+/* boot-sequence intro */
+.intro-boot { color: var(--boot-fg); font: 15px/1.7 'Share Tech Mono', monospace; }
+.intro-boot .boot-top, .intro-boot .boot-bottom { position: absolute; left: 0; right: 0; height: 50.5%; background: #04050a; transition: transform .55s cubic-bezier(.7, 0, .2, 1); }
+.intro-boot .boot-top { top: 0; } .intro-boot .boot-bottom { bottom: 0; }
+.intro-boot .boot-log { position: absolute; left: 50%; top: 50%; translate: -50% -50%; margin: 0; width: min(92vw, 640px); white-space: pre-wrap;
+  text-shadow: 0 0 8px var(--boot-fg); transition: opacity .2s; }
+.intro-boot .boot-log div:last-child { color: var(--boot-alt); text-shadow: 0 0 10px var(--boot-alt); }
+.intro-boot .boot-scan { position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: var(--boot-fg); box-shadow: 0 0 18px 4px var(--boot-fg); opacity: 0; }
+.intro-boot.is-scanning .boot-scan { opacity: 1; animation: bootscan .3s ease-in-out 2 alternate; }
+@keyframes bootscan { from { top: 8%; } to { top: 92%; } }
+.intro-boot.is-open .boot-top { transform: translateY(-101%); }
+.intro-boot.is-open .boot-bottom { transform: translateY(101%); }
+.intro-boot.is-open .boot-log { opacity: 0; }
+.intro-boot.is-open .boot-scan { opacity: 1; height: 100%; top: 0; background: transparent; box-shadow: none; animation: none;
+  border-top: 2px solid var(--boot-fg); border-bottom: 2px solid var(--boot-alt); transition: height .55s, top .55s; }

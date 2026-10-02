@@ -14,6 +14,8 @@ export const FONTS = {
   dela:      { family: "'Dela Gothic One', 'Hiragino Sans', sans-serif", label: 'Dela Gothic One (anime)' },
   cormorant: { family: "'Cormorant Garamond', Georgia, serif", label: 'Cormorant Garamond' },
   mono:      { family: "'Space Mono', ui-monospace, monospace", label: 'Space Mono' },
+  orbitron:  { family: "'Orbitron', 'Eurostile', sans-serif", label: 'Orbitron (techno display)' },
+  sharetech: { family: "'Share Tech Mono', ui-monospace, monospace", label: 'Share Tech Mono (terminal)' },
 };
 
 export const DEFAULT_THEME = {

@@ -26,6 +26,7 @@ const INTROS = {
   'static-cut': staticCut,
   'glitch': glitch,
   'light-bloom': lightBloom,
+  'boot-sequence': bootSequence,
   'fade': (swap, theme, d) => crossfade(swap, theme, d / 2),
   'none': (swap) => swap(),
 };
@@ -204,6 +205,37 @@ async function lightBloom(swap, theme, duration) {
     { duration: duration * 0.45, easing: 'ease-in', fill: 'forwards' }).finished;
   await swap();
   await o.animate([{ opacity: 1 }, { opacity: 0 }], { duration: duration * 0.55, easing: 'ease-out', fill: 'forwards' }).finished;
+  o.remove();
+}
+
+// ---------------------------------------------------------------------
+// Boot sequence: a terminal "jacks in" line by line, a scan line sweeps,
+// and the screen splits open with an RGB-shifted reveal.
+// ---------------------------------------------------------------------
+async function bootSequence(swap, theme, duration) {
+  const o = overlay('intro-boot');
+  const c = theme.colors;
+  o.style.setProperty('--boot-fg', c.accent);
+  o.style.setProperty('--boot-alt', c.accent2);
+  const lines = [
+    '> TH8RTY//NET  node 08  ............  online',
+    '> handshake  ........................  OK',
+    '> decrypting catalogue  [##########] 100%',
+    '> routing to NIGHT MARKET',
+    '> JACK IN_',
+  ];
+  o.innerHTML = `<div class="boot-top"></div><div class="boot-bottom"></div><pre class="boot-log"></pre><div class="boot-scan"></div>`;
+  const log = o.querySelector('.boot-log');
+  const typeMs = (duration * 0.42) / lines.join('').length;
+  for (const line of lines) {
+    const row = document.createElement('div'); log.append(row);
+    for (let i = 0; i < line.length; i += 3) { row.textContent = line.slice(0, i + 3); await wait(typeMs * 3); }
+  }
+  o.classList.add('is-scanning');
+  await wait(duration * 0.12);
+  await swap();
+  o.classList.add('is-open');
+  await wait(duration * 0.42);
   o.remove();
 }
 

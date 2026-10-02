@@ -77,6 +77,22 @@ const SOUNDS = {
     const n = ac.createBufferSource(); n.buffer = noiseBuffer(ac, 0.15);
     n.connect(env(ac, t, 0.3, 0.002, 0.1)).connect(out); n.start(t);
   },
+  // Terminal boot: data blips, a filtered saw power-up, a low impact.
+  'synth-boot'(ac, t) {
+    const out = ac.createGain(); out.gain.value = 0.4; out.connect(ac.destination);
+    [880, 1318.5, 1046.5, 1568, 1318.5, 2093, 1760, 2637].forEach((f, i) =>
+      bell(ac, out, t + i * 0.055, f, 0.12, 0.05, 'square'));
+    const o = ac.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(55, t + 0.35); o.frequency.exponentialRampToValueAtTime(220, t + 0.95);
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 9;
+    lp.frequency.setValueAtTime(200, t + 0.35); lp.frequency.exponentialRampToValueAtTime(4200, t + 0.95);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t + 0.35); g.gain.exponentialRampToValueAtTime(0.35, t + 0.8); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+    o.connect(lp).connect(g).connect(out); o.start(t + 0.35); o.stop(t + 1.15);
+    const k = ac.createOscillator(); k.type = 'sine';
+    k.frequency.setValueAtTime(90, t + 0.95); k.frequency.exponentialRampToValueAtTime(38, t + 1.3);
+    k.connect(env(ac, t + 0.95, 0.8, 0.005, 0.4)).connect(out); k.start(t + 0.95); k.stop(t + 1.4);
+  },
   // Soft bell for calm themes.
   'chime'(ac, t) {
     const out = ac.createGain(); out.gain.value = 0.35; out.connect(ac.destination);

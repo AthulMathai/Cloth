@@ -109,6 +109,13 @@ export function categoryHero(cat, theme, extra = '') {
       <h1 class="manga-title">${name}</h1>
       <p class="manga-tag">${tag}</p><p class="lede">${desc}</p>${extra}</div></section>`;
   }
+  if (style === 'holo') {
+    return `<section class="hero hero--holo"><div class="hero-inner wrap">
+      <span class="holo-readout" aria-hidden="true">sector 08 // night market // signal stable</span>
+      <h1 class="holo-title" data-text="${name}">${name}</h1>
+      <span class="holo-jp" aria-hidden="true">サイバーパンク</span>
+      <p class="manga-tag">${tag}</p><p class="lede">${desc}</p>${extra}</div></section>`;
+  }
   if (style === 'serif-centered') {
     return `<section class="hero hero--serif"><div class="hero-inner">
       <h1 class="serif-title">${name}</h1><p class="lede">${tag} ${desc}</p>${extra}</div></section>`;
