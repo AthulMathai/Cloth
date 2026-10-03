@@ -8,7 +8,7 @@ import { addDesignToBag } from '../lib/cart.js';
 import { webglAvailable } from '../three/studio.js';
 import {
   loadCatalogue, placementsFor, areaGeometry, printSummary, readArtwork, uploadArtwork, renderMockup, renderProduction,
-  measureText, FONTS, TEXT_FONT_SIZE, UNITS_PER_INCH, VIEWBOX,
+  measureText, FONTS, TEXT_FONT_SIZE, UNITS_PER_INCH, viewOf, viewBoxFor, methodsFor, wrapPatternSVG,
 } from '../lib/designs.js';
 
 const STATUS = {
@@ -47,7 +47,7 @@ export async function load({ id }) {
               <button data-mode="3d" aria-pressed="false">3D</button><button data-mode="2d" aria-pressed="false">Flat</button><button data-mode="tryon" aria-pressed="false" class="dz-tryon-btn">Try on</button>
             </div>
             <div class="seg" role="group" aria-label="View">
-              <button data-view="front" aria-pressed="true">Front</button><button data-view="back" aria-pressed="false">Back</button>
+              <button data-view="front" aria-pressed="true">Front</button><button data-view="back" aria-pressed="false">Back</button><button data-view="allover" aria-pressed="false" data-allover-btn>All-over</button>
             </div>
             <div class="seg">
               <button data-act="undo" aria-label="Undo" title="Undo (Ctrl+Z)">↶</button>
@@ -112,7 +112,16 @@ function mountDesigner(root, cat, saved) {
   // ---------- history ----------
   const snapshot = () => JSON.stringify({ config: S.config, product: S.product.id, color: S.color, size: S.size });
   let lastSnap = snapshot();
+  // Areas that only allow some methods (all-over = sublimation) keep a valid one.
+  function fixMethods() {
+    for (const p of placements()) {
+      const ok = methodsFor(cat, p).map(m => m.code), cur = S.config.methods[p.code];
+      if (cur && !ok.includes(cur)) delete S.config.methods[p.code];
+      if (p.methods?.length && !S.config.methods[p.code] && S.config.layers.some(l => l.placement === p.code)) S.config.methods[p.code] = p.methods[0];
+    }
+  }
   function commit() {
+    fixMethods();
     const now = snapshot();
     if (now === lastSnap) return;
     S.history.push(lastSnap); if (S.history.length > 80) S.history.shift();
@@ -130,19 +139,26 @@ function mountDesigner(root, cat, saved) {
   const redo = () => { if (S.future.length) { S.history.push(lastSnap); restore(S.future.pop()); } };
 
   // ---------- stage ----------
+  const hasAllover = () => placements().some(p => p.canvas === 'wrap');
   function stageScale() {
-    const box = $('[data-stage]');
-    const byWidth = Math.min(box.clientWidth - 24, 640) / VIEWBOX.w;
-    const byHeight = (innerWidth > 820 ? innerHeight - 230 : innerHeight * 0.62) / VIEWBOX.h;   // whole garment visible
-    return Math.max(200 / VIEWBOX.w, Math.min(byWidth, byHeight));
+    const box = $('[data-stage]'), VB = viewBoxFor(S.view);
+    const byWidth = Math.min(box.clientWidth - 24, S.view === 'allover' ? 760 : 640) / VB.w;
+    const byHeight = (innerWidth > 820 ? innerHeight - 230 : innerHeight * (S.view === 'allover' ? 0.8 : 0.62)) / VB.h;   // whole garment visible
+    return Math.max(200 / VB.w, Math.min(byWidth, byHeight));
   }
   function renderStage() {
+    if (S.view === 'allover' && !hasAllover()) S.view = 'front';
     scale = stageScale();
+    const VIEWBOX = viewBoxFor(S.view);
     const c = $('[data-canvas]');
     c.style.width = `${VIEWBOX.w * scale}px`; c.style.height = `${VIEWBOX.h * scale}px`;
     c.style.transform = `scale(${S.zoom})`;
-    const areas = placements().filter(p => p.view === S.view);
-    c.innerHTML = garmentSVG({ type: S.product.product_type, color: colorHex(), mode: 'flat', view: S.view, label: `${S.product.name} ${S.view}` }) +
+    const areas = placements().filter(p => viewOf(p) === S.view);
+    const ab = root.querySelector('[data-allover-btn]'); if (ab) ab.hidden = !hasAllover();
+    c.classList.toggle('is-wrap', S.view === 'allover');
+    c.innerHTML = (S.view === 'allover'
+      ? wrapPatternSVG({ type: S.product.product_type, color: colorHex(), placements: areas })
+      : garmentSVG({ type: S.product.product_type, color: colorHex(), mode: 'flat', view: S.view, label: `${S.product.name} ${S.view}` })) +
       areas.map(p => {
         const g = areaGeometry(S.product.product_type, p);
         const used = S.config.layers.some(l => l.placement === p.code);
@@ -152,7 +168,7 @@ function mountDesigner(root, cat, saved) {
           <span class="dz-area-label">${esc(p.label)} · ${+p.max_w_in}×${+p.max_h_in} in</span>
           ${S.config.layers.filter(l => l.placement === p.code).map(layerHTML).join('')}
         </div>`;
-      }).join('');
+      }).join('') + (S.view === 'allover' ? wrapPatternSVG({ type: S.product.product_type, color: colorHex(), placements: areas, overlay: true }) : '');
     c.classList.toggle('is-dark', isDark(colorHex()));
     root.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === S.view));
     renderMode();
@@ -217,7 +233,7 @@ function mountDesigner(root, cat, saved) {
       l.y_in = clamp(drag.l0.y_in + (dx * Math.sin(a) + dy * Math.cos(a)) * k, 0, +m.max_h_in);
     } else if (drag.mode === 'resize') {
       const f = Math.hypot(e.clientX - drag.cx, e.clientY - drag.cy) / drag.d0;
-      const maxF = Math.min(m.max_w_in / drag.l0.w_in, m.max_h_in / drag.l0.h_in) * 1.0001;
+      const maxF = Math.min(m.max_w_in / drag.l0.w_in, m.max_h_in / drag.l0.h_in) * (m.canvas === 'wrap' ? 1.6 : 1.0001);   // all-over art may bleed past the edges
       const minF = 0.4 / Math.min(drag.l0.w_in, drag.l0.h_in);
       const k = clamp(f, minF, maxF);
       l.w_in = round2(drag.l0.w_in * k); l.h_in = round2(drag.l0.h_in * k);
@@ -263,7 +279,7 @@ function mountDesigner(root, cat, saved) {
   function ensureActiveInView() {
     const ok = placements().find(p => p.code === S.active);
     if (!ok) S.active = placements()[0].code;
-    S.view = pl(S.active).view;
+    S.view = viewOf(pl(S.active));
   }
   async function addImage(file) {
     ensureActiveInView();
@@ -272,10 +288,11 @@ function mountDesigner(root, cat, saved) {
     const key = 'local:' + crypto.randomUUID();
     S.art[key] = art;
     const m = pl(S.active), ratio = art.width / art.height;
-    let w = m.max_w_in * 0.8, h = w / ratio;
-    if (h > m.max_h_in * 0.8) { h = m.max_h_in * 0.8; w = h * ratio; }
+    const fill = m.canvas === 'wrap' ? 1 : 0.8;          // all-over art starts edge to edge
+    let w = m.max_w_in * fill, h = w / ratio;
+    if (h > m.max_h_in * fill) { h = m.max_h_in * fill; w = h * ratio; }
     const l = { id: 'l' + Math.random().toString(36).slice(2, 9), type: 'image', placement: S.active, local: key,
-                x_in: round2(m.max_w_in / 2), y_in: round2(Math.min(m.max_h_in / 2, h / 2 + m.max_h_in * 0.08)),
+                x_in: round2(m.max_w_in / 2), y_in: round2(m.canvas === 'wrap' ? m.max_h_in / 2 : Math.min(m.max_h_in / 2, h / 2 + m.max_h_in * 0.08)),
                 w_in: round2(w), h_in: round2(h), rotation: 0 };
     S.config.layers.push(l); S.selected = l.id;
     renderStage(); commit();
@@ -349,7 +366,7 @@ function mountDesigner(root, cat, saved) {
       studio = m.createStudio(host, kit, {
         onPick(id) {
           const l = layer(id); if (!l) return;
-          if (S.selected !== id) { S.selected = id; S.active = l.placement; S.view = pl(l.placement).view; renderPanel(); sync3d(); }
+          if (S.selected !== id) { S.selected = id; S.active = l.placement; S.view = viewOf(pl(l.placement)); renderPanel(); sync3d(); }
         },
         onMove(id, x, y) { const l = layer(id); if (!l) return; l.x_in = round2(x); l.y_in = round2(y); updateLayerEl(l); },
         onDragEnd(id, moved) { if (moved) commit(); renderStage(); renderPanel(); },
@@ -373,7 +390,8 @@ function mountDesigner(root, cat, saved) {
     if (!kit || syncRaf) return;
     syncRaf = requestAnimationFrame(() => { syncRaf = 0; sync3d(); });
   }
-  const viewFor = (code) => /sleeve/.test(code || '') ? code.replace(/^(left|right)_sleeve$/, (m0, side) => `sleeve_${side[0]}`) : (pl(code)?.view || S.view);
+  const viewFor = (code) => /sleeve/.test(code || '') ? `sleeve_${code[0]}`
+    : code === 'all_over' ? 'three' : (pl(code)?.view || (S.view === 'allover' ? 'three' : S.view));
   function setMode(mode) {
     if (mode === 'tryon') { openTryOn(); return; }
     S.mode = mode;
@@ -421,14 +439,15 @@ function mountDesigner(root, cat, saved) {
         }).join('')}</div>
       </section>
       <section class="dz-step"><h2><span class="dz-n">3</span> Print areas</h2>
-        <div class="dz-areas">${placements().map(x => {
+        ${[['Print areas', placements().filter(x => x.canvas !== 'wrap')], ['All-over — the whole garment is your canvas', placements().filter(x => x.canvas === 'wrap')]]
+          .filter(([, list]) => list.length).map(([title, list], gi) => `${gi ? `<p class="dz-area-group">${esc(title)}</p>` : ''}<div class="dz-areas">${list.map(x => {
           const u = used.find(s => s.placement === x.code);
           return `<button class="dz-area-btn${S.active === x.code ? ' is-on' : ''}" data-pick-area="${x.code}" aria-pressed="${S.active === x.code}">
             <strong>${esc(x.label)}</strong><span class="muted small">${u ? `${u.width_in}×${u.height_in} in used` : `up to ${+x.max_w_in}×${+x.max_h_in} in`}</span></button>`;
-        }).join('')}</div>
-        ${used.map(u => `<label class="dz-method"><span>${esc(pl(u.placement).label)} print method</span>
-          <select data-method="${u.placement}">${cat.methods.map(m => `<option value="${m.code}"${u.method === m.code ? ' selected' : ''}>${esc(m.label)}</option>`).join('')}</select></label>`).join('')}
-        ${used.length ? `<p class="small muted">${esc(cat.methods.find(m => m.code === (S.config.methods[S.active] || 'dtg'))?.description || '')}</p>` : ''}
+        }).join('')}</div>`).join('')}
+        ${used.map(u => { const opts = methodsFor(cat, pl(u.placement)); return `<label class="dz-method"><span>${esc(pl(u.placement).label)} print method</span>
+          <select data-method="${u.placement}"${opts.length < 2 ? ' disabled' : ''}>${opts.map(m => `<option value="${m.code}"${u.method === m.code ? ' selected' : ''}>${esc(m.label)}</option>`).join('')}</select></label>`; }).join('')}
+        ${used.length ? `<p class="small muted">${esc(cat.methods.find(m => m.code === (S.config.methods[S.active] || pl(S.active)?.methods?.[0] || 'dtg'))?.description || '')}</p>` : ''}
       </section>
       <section class="dz-step"><h2><span class="dz-n">4</span> Artwork</h2>
         <div class="dz-add">
@@ -452,7 +471,7 @@ function mountDesigner(root, cat, saved) {
           <label class="dz-range"><span>Size</span><input type="range" data-prop="width" min="0.5" step="0.1" max="${maxWidth(sel).toFixed(1)}" value="${sel.w_in}" aria-label="Artwork width in inches"></label>
           <div class="dz-readout"><span data-size-readout>${sel.w_in.toFixed(1)} × ${sel.h_in.toFixed(1)} in</span>
             <label>Rotate <input type="number" data-prop="rotation" min="0" max="359" value="${sel.rotation || 0}">°</label>
-            <button class="linklike" data-act="center">Center</button></div>
+            <button class="linklike" data-act="center">Center</button>${pl(sel.placement)?.canvas === 'wrap' ? '<button class="linklike" data-act="cover">Cover whole area</button>' : ''}</div>
           ${dpi ? `<p class="small ${dpi < 90 ? 'dz-warn' : dpi < 150 ? 'dz-caution' : 'muted'}">${dpi} DPI at this size${dpi < 90 ? ' — will print blurry. Make it smaller or use a bigger image.' : dpi < 150 ? ' — edges may look soft.' : ' — prints sharp.'}</p>` : ''}
         </div>` : ''}
       </section>
@@ -482,9 +501,9 @@ function mountDesigner(root, cat, saved) {
       renderStage(); commit(); renderPanel();
     } else if (d.size) { S.size = d.size; commit(); renderPanel(); }
     else if (d.mode) setMode(d.mode);
-    else if (d.pickArea) { S.active = d.pickArea; S.view = pl(d.pickArea).view; S.selected = null; renderStage(); renderPanel(); studio?.setView(viewFor(d.pickArea)); }
-    else if (d.view) { S.view = d.view; S.active = placements().find(p => p.view === S.view)?.code || S.active; S.selected = null; renderStage(); renderPanel(); studio?.setView(d.view); }
-    else if (d.select) { const l = layer(d.select); S.selected = l.id; S.active = l.placement; S.view = pl(l.placement).view; renderStage(); renderPanel(); studio?.setView(viewFor(l.placement)); }
+    else if (d.pickArea) { S.active = d.pickArea; S.view = viewOf(pl(d.pickArea)); S.selected = null; renderStage(); renderPanel(); studio?.setView(viewFor(d.pickArea)); }
+    else if (d.view) { S.view = d.view; S.active = placements().find(p => viewOf(p) === S.view)?.code || S.active; S.selected = null; renderStage(); renderPanel(); studio?.setView(d.view === 'allover' ? 'three' : d.view); }
+    else if (d.select) { const l = layer(d.select); S.selected = l.id; S.active = l.placement; S.view = viewOf(pl(l.placement)); renderStage(); renderPanel(); studio?.setView(viewFor(l.placement)); }
     else if (d.move) moveLayer(d.move, Number(d.dir));
     else if (d.removeLayer) removeLayer(d.removeLayer);
     else if (d.textColor) { const l = layer(S.selected); l.color = d.textColor; renderStage(); commit(); renderPanel(); }
@@ -497,6 +516,13 @@ function mountDesigner(root, cat, saved) {
     else if (d.act === 'zoom-out') { if (S.mode === '3d' && studio) studio.zoom(1.22); else { S.zoom = Math.max(0.75, S.zoom - 0.25); renderStage(); } }
     else if (d.act === 'reset') { if (S.config.layers.length && !confirmInline(t, 'Remove all artwork?')) return;
       S.config.layers = []; S.selected = null; renderStage(); commit(); }
+    else if (d.act === 'cover') {
+      const l = layer(S.selected), m = pl(l.placement), ratio = l.w_in / l.h_in;
+      let w = +m.max_w_in, h = w / ratio;
+      if (h < m.max_h_in) { h = +m.max_h_in; w = h * ratio; }              // fill both directions, keep proportions
+      l.w_in = round2(w); l.h_in = round2(h); l.x_in = round2(m.max_w_in / 2); l.y_in = round2(m.max_h_in / 2); l.rotation = 0;
+      renderStage(); commit(); renderPanel();
+    }
     else if (d.act === 'center') { const l = layer(S.selected), m = pl(l.placement); l.x_in = round2(m.max_w_in / 2); renderStage(); commit(); }
     else if (d.act === 'save') save().catch(showError);
     else if (d.act === 'submit') submit().catch(showError);
@@ -533,7 +559,8 @@ function mountDesigner(root, cat, saved) {
   });
   function maxWidth(l) {
     const m = pl(l.placement);
-    return Math.max(0.5, Math.min(+m.max_w_in, +m.max_h_in * (l.w_in / l.h_in)));
+    const k = m.canvas === 'wrap' ? 1.6 : 1;
+    return Math.max(0.5, Math.min(+m.max_w_in * k, +m.max_h_in * k * (l.w_in / l.h_in)));
   }
 
   // ---------- price ----------
@@ -654,7 +681,7 @@ function mountDesigner(root, cat, saved) {
     const used = placements().filter(p => S.config.layers.some(l => l.placement === p.code));
     const mockups = {}, production = {};
     for (const view of ['front', 'back']) {
-      if (view === 'back' && !used.some(p => p.view === 'back')) continue;
+      if (view === 'back' && !used.some(p => p.view === 'back' || p.canvas === 'wrap')) continue;
       let blob = null;
       if (studio) { try { sync3d(); blob = await studio.mockup(view); } catch (e) { console.warn('3D mockup failed, using flat', e); } }
       blob ||= await renderMockup(S.config, S.product, colorHex(), view, placements(), S.art);

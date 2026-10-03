@@ -177,7 +177,7 @@ export function createStudio(host, kit, { onPick, onMove, onDragEnd } = {}) {
     if (drag) {
       const hit = cast(e, inst.picks.filter(m => m.userData.part === drag.part));
       if (!hit?.uv) return;
-      const q = kit.areaLocal(drag.area, kit.uvToInches(drag.part, hit.uv));
+      const q = kit.areaPoint(drag.area, drag.part, hit.uv);
       const x = drag.x0 + (q.x - drag.start.x), y = drag.y0 + (q.y - drag.start.y);
       drag.moved = true;
       onMove?.(drag.id, Math.min(drag.area.w, Math.max(0, x)), Math.min(drag.area.h, Math.max(0, y)));

@@ -162,3 +162,31 @@ the hands can look off. Lighting matching is approximate.
 To swap in real scanned/modelled garments later, replace the geometry in
 `garment-model.js` for a type; the print pipeline only needs meshes with
 `userData.part` and inch-based UVs.
+
+## All-over print (whole garment as one canvas)
+
+The **All-over** view shows the garment unrolled like a cut-and-sew pattern:
+
+- **All-over body wrap** (44 × 32 in): centre front in the middle, both side seams,
+  centre back at the left and right edges. Art that crosses a side seam continues
+  onto the back, so one image can wrap the whole body (a dragon around the torso).
+  Neck openings and rib bands are dimmed: they aren't printed.
+- **Left / right sleeve (full wrap)** (22 × 26 in): centre = outer arm, edges =
+  underarm seam, top = shoulder seam. Not on tanks.
+- Art may bleed past the edges (resize up to 1.6×); only what lands on fabric prints.
+  "Cover whole area" fills the canvas keeping proportions.
+- Printed with **sublimation (cut & sew)** only — the method is locked for these
+  areas, and sublimation can't be chosen for normal print areas (database-enforced:
+  `print_placements.methods`, `print_methods.restricted`).
+- 3D: the wrap is mapped onto front and back with matching side seams (the back is
+  drawn in thin strips because the panel width changes with height); full sleeves
+  map around each sleeve. Hood, cuffs and waistband stay the garment colour.
+- Production: the saved config keeps inches + original uploads; the browser's
+  preview production PNG for these large panels is capped at ~9 MP (≈80 dpi for the
+  body wrap) so phones can make it — the print partner re-renders panels at full
+  resolution from the config.
+- Pricing rows (placeholders, edit in Admin → Custom pricing): body wrap +$38,
+  each full sleeve +$12, sublimation method $0 (coverage is in the placement price),
+  plus the existing full-area tier.
+
+Migration: `20261003000013_all_over_print.sql` (applied).

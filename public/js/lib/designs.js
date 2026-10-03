@@ -4,9 +4,21 @@
 // what checkout will charge for the saved design.
 import { db, auth, storage } from './supabase.js';
 import { garmentPaths, isDark } from '../components/garment.js';
+import { wrapShape } from '../three/specs.js';
 
 export const UNITS_PER_INCH = 10;             // garment drawings: 10 units = 1 inch
 export const VIEWBOX = { x: -10, y: -12, w: 320, h: 352 };
+// The all-over view: the garment unrolled like a cut-and-sew pattern.
+// Body wrap on top (centre front in the middle, centre back at both edges),
+// the two full sleeves below. 10 units = 1 inch.
+export const WRAP_VIEWBOX = { x: -236, y: -16, w: 472, h: 632 };
+const WRAP_GEOMETRY = { all_over: { cx: 0, cy: 160 }, left_sleeve_full: { cx: 116, cy: 470 }, right_sleeve_full: { cx: -116, cy: 470 } };
+
+/** Which canvas/view a placement is edited on: 'front' | 'back' | 'allover'. */
+export const viewOf = (p) => p?.canvas === 'wrap' ? 'allover' : p?.view;
+export const viewBoxFor = (view) => view === 'allover' ? WRAP_VIEWBOX : VIEWBOX;
+/** Print methods offered for a placement (restricted ones only where listed). */
+export const methodsFor = (cat, p) => cat.methods.filter(m => p?.methods?.length ? p.methods.includes(m.code) : !m.restricted);
 
 // Print area centres/sizes in garment units (width/height come from the
 // placement's max inches). Sleeves sit on the sleeve, slightly angled.
@@ -25,6 +37,10 @@ const AREA_GEOMETRY = {
 };
 
 export function areaGeometry(productType, placement) {
+  if (placement.canvas === 'wrap') {
+    const w = WRAP_GEOMETRY[placement.code] || { cx: 0, cy: 160 };
+    return { ...w, rot: 0, w: placement.max_w_in * UNITS_PER_INCH, h: placement.max_h_in * UNITS_PER_INCH };
+  }
   const g = { ...AREA_GEOMETRY.default, ...(AREA_GEOMETRY[productType] || {}) }[placement.code];
   return { ...g, w: placement.max_w_in * UNITS_PER_INCH, h: placement.max_h_in * UNITS_PER_INCH };
 }
@@ -71,7 +87,7 @@ export function printSummary(config, placements) {
     const round2 = (n) => Math.round(n * 100) / 100;
     return {
       placement: p.code,
-      method: config.methods?.[p.code] || 'dtg',
+      method: config.methods?.[p.code] || p.methods?.[0] || 'dtg',
       width_in: round2(Math.min(b.x1, p.max_w_in) - Math.max(0, b.x0)),
       height_in: round2(Math.min(b.y1, p.max_h_in) - Math.max(0, b.y0)),
     };
@@ -188,10 +204,13 @@ export async function renderProduction(config, placements, art, dpi = 150) {
   for (const p of placements) {
     const layers = config.layers.filter(l => l.placement === p.code);
     if (!layers.length) continue;
+    // Big all-over panels are capped to ~9 megapixels in the browser; the saved
+    // design (inches + original uploads) lets production re-render at full DPI.
+    const d = Math.min(dpi, Math.floor(Math.sqrt(9e6 / (p.max_w_in * p.max_h_in))));
     const c = document.createElement('canvas');
-    c.width = Math.round(p.max_w_in * dpi); c.height = Math.round(p.max_h_in * dpi);
+    c.width = Math.round(p.max_w_in * d); c.height = Math.round(p.max_h_in * d);
     const ctx = c.getContext('2d');
-    for (const l of layers) drawLayer(ctx, l, imgs[l.id], dpi);
+    for (const l of layers) drawLayer(ctx, l, imgs[l.id], d);
     files[p.code] = await new Promise(r => c.toBlob(r, 'image/png'));
   }
   return files;
@@ -212,7 +231,7 @@ export async function renderMockup(config, product, color, view, placements, art
   ctx.fillStyle = color; ctx.strokeStyle = dark ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.22)'; ctx.lineWidth = 1.5;
   const bp = new Path2D(body); ctx.fill(bp); ctx.stroke(bp);
   ctx.lineWidth = 1.4; for (const d of details) ctx.stroke(new Path2D(d));
-  for (const p of placements.filter(p => p.view === view)) {
+  for (const p of placements.filter(p => p.view === view && p.canvas !== 'wrap')) {
     const g = areaGeometry(product.product_type, p);
     ctx.save();
     ctx.translate(g.cx, g.cy); ctx.rotate(g.rot * Math.PI / 180); ctx.translate(-g.w / 2, -g.h / 2);
@@ -220,4 +239,70 @@ export async function renderMockup(config, product, color, view, placements, art
     ctx.restore();
   }
   return new Promise(r => c.toBlob(r, 'image/png'));
+}
+
+// ---------------------------------------------------------------------
+// All-over pattern drawing (flat editor). Shows where the art lands on the
+// garment: centre front, side seams, centre back, neck, hem rib, sleeves.
+// ---------------------------------------------------------------------
+export function wrapPatternSVG({ type = 'tee', color = '#141414', placements = [], overlay = false }) {
+  const sh = wrapShape(type), spec = sh.spec, U = UNITS_PER_INCH, dark = isDark(color);
+  // overlay sits on top of the artwork: guides in a neutral ink with a halo so they read on any art
+  const ink = overlay ? 'rgba(255,255,255,.95)' : (dark ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.45)');
+  const faint = overlay ? 'rgba(255,255,255,.7)' : (dark ? 'rgba(255,255,255,.22)' : 'rgba(0,0,0,.18)');
+  const r = (n) => Math.round(n * 10) / 10;
+  const has = (code) => placements.some(p => p.code === code);
+  const fills = [], lines = [], labels = [], shapes = [], cuts = [];
+  const lab = (x, y, t, anchor = 'middle') => labels.push(`<text x="${r(x)}" y="${r(y)}" text-anchor="${anchor}" class="wrap-label">${t}</text>`);
+  if (has('all_over')) {
+    const L = spec.L, rows = [];
+    for (let y = 0; y <= L + 1e-6; y += 0.5) rows.push(y);
+    const body = [...rows.map(y => `${r(2 * sh.halfWidth(y) * U)},${r(y * U)}`), ...rows.slice().reverse().map(y => `${r(-2 * sh.halfWidth(y) * U)},${r(y * U)}`)].join(' ');
+    shapes.push(`M${body.replace(/ /g, ' L')} Z`);
+    fills.push(`<polygon points="${body}" fill="${color}" stroke="${ink}" stroke-width="1.4"/>`);
+    const side = (sx) => rows.map(y => `${r(sx * sh.halfWidth(y) * U)},${r(y * U)}`).join(' ');
+    const nw = (spec.neck.w ?? sh.halfWidth(0)) * U, nf = spec.neck.front * U, nb = spec.neck.back * U, w0 = 2 * sh.halfWidth(0) * U;
+    cuts.push(`M${-nw},0 A${nw},${nf} 0 0 0 ${nw},0 Z`, `M${w0},0 A${nw},${nb} 0 0 0 ${w0 - nw},0 Z`, `M${-w0},0 A${nw},${nb} 0 0 1 ${-w0 + nw},0 Z`);
+    lines.push(`<polyline points="${side(1)}" stroke-dasharray="6 5"/>`, `<polyline points="${side(-1)}" stroke-dasharray="6 5"/>`,
+      `<line x1="0" y1="${r(nf)}" x2="0" y2="${r(L * U)}" stroke-dasharray="2 6" class="faint"/>`);
+    if (spec.hemRib) {
+      const y0 = (L - spec.hemRib) * U, hw = 2 * sh.halfWidth(L) * U;
+      cuts.push(`M${-hw},${r(y0)} H${hw} V${r(L * U)} H${-hw} Z`);
+      lab(0, (L - spec.hemRib / 2) * U + 4, 'RIB WAISTBAND — NOT PRINTED');
+    }
+    lab(0, (spec.neck.front + 2) * U, 'CENTRE FRONT'); lab(sh.halfWidth(6) * U, 6 * U - 6, 'SIDE'); lab(-sh.halfWidth(6) * U, 6 * U - 6, 'SIDE');
+    lab(2 * sh.halfWidth(10) * U - 6, 10 * U, 'CENTRE BACK', 'end'); lab(-2 * sh.halfWidth(10) * U + 6, 10 * U, 'CENTRE BACK', 'start');
+    lab(sh.halfWidth(14) * U * 1.5, 14 * U, 'BACK'); lab(-sh.halfWidth(14) * U * 1.5, 14 * U, 'BACK');
+  }
+  if (sh.sleeve) {
+    for (const [code, name] of [['left_sleeve_full', 'LEFT SLEEVE'], ['right_sleeve_full', 'RIGHT SLEEVE']]) {
+      if (!has(code)) continue;
+      const cx = WRAP_GEOMETRY[code].cx, top = WRAP_GEOMETRY[code].cy - 130, len = sh.sleeve.len, rows = [];
+      for (let d = 0; d <= len + 1e-6; d += 0.5) rows.push(d);
+      const circ = (d) => Math.PI * 2 * sh.sleeve.r(d) * 0.975 / 2 * U;
+      const pts = [...rows.map(d => `${r(cx + circ(d))},${r(top + d * U)}`), ...rows.slice().reverse().map(d => `${r(cx - circ(d))},${r(top + d * U)}`)].join(' ');
+      shapes.push(`M${pts.replace(/ /g, ' L')} Z`);
+      fills.push(`<polygon points="${pts}" fill="${color}" stroke="${ink}" stroke-width="1.4"/>`);
+      lines.push(`<line x1="${cx}" y1="${top}" x2="${cx}" y2="${r(top + len * U)}" stroke-dasharray="2 6" class="faint"/>`);
+      lab(cx, top + 16, `${name} · OUTER ARM`); lab(cx, r(top + len * U) + 14, 'UNDERARM SEAM AT BOTH EDGES');
+      if (spec.sleeve.cuff) {
+        const y0 = top + (len - spec.sleeve.cuff) * U, hw = circ(len);
+        cuts.push(`M${r(cx - hw)},${r(y0)} H${r(cx + hw)} V${r(top + len * U)} H${r(cx - hw)} Z`);
+      }
+    }
+  }
+  const vb = WRAP_VIEWBOX;
+  const g = (inner) => `<g fill="none" stroke="${ink}" stroke-width="1.2">${inner}</g>`;
+  if (overlay) {
+    // dim everything that won't be printed: outside the garment, neck openings, rib bands
+    const outside = `M${vb.x},${vb.y} h${vb.w} v${vb.h} h${-vb.w} Z ${shapes.join(' ')}`;
+    return `<svg class="wrap-overlay" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" aria-hidden="true">
+      <path d="${outside}" fill-rule="evenodd" fill="var(--surface, #f3efe6)" opacity=".72"/>
+      <path d="${cuts.join(' ')}" fill="var(--surface, #f3efe6)" opacity=".8"/>
+      <g style="filter: drop-shadow(0 0 1.5px rgba(0,0,0,.9))">${g(lines.join('').replace(/class="faint"/g, `stroke="${faint}"`))}
+        <g fill="#fff">${labels.join('')}</g></g></svg>`;
+  }
+  return `<svg class="garment garment--wrap" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" role="img" aria-label="All-over print pattern">
+    ${fills.join('')}<path d="${cuts.join(' ')}" fill="var(--surface, #f3efe6)" opacity=".6"/>
+    ${g(lines.join('').replace(/class="faint"/g, `stroke="${faint}"`))}<g fill="${ink}">${labels.join('')}</g></svg>`;
 }

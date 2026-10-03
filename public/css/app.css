@@ -603,6 +603,13 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 400; line-height: 1;
 .swatch--sm { width: 28px; height: 28px; }
 .dz-areas { display: grid; gap: 6px; margin-bottom: 12px; }
 .dz-area-btn { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); background: none; cursor: pointer; text-align: left; font-size: 14px; }
+.dz-area-group { margin: 14px 0 6px; font-size: 13px; font-weight: 800; }
+.dz-canvas.is-wrap > .garment { filter: none; }
+.garment--wrap .wrap-label { font: 700 9px/1 'Inter', system-ui, sans-serif; letter-spacing: .06em; pointer-events: none; }
+.dz-canvas.is-wrap .dz-area { border-style: dotted; }
+.dz-canvas .wrap-overlay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }
+.wrap-overlay .wrap-label { font: 800 9px/1 'Inter', system-ui, sans-serif; letter-spacing: .06em; }
+.dz-canvas.is-wrap .dz-layer.is-selected { z-index: 3; }
 .dz-area-btn.is-on { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
 .dz-method { display: grid; gap: 4px; font-size: 14px; margin-top: 10px; }
 .dz-method select, .dz-props select { min-height: 40px; padding: 6px 10px; border: 1px solid var(--line); background: var(--bg); }

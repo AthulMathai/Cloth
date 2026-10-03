@@ -18,11 +18,20 @@ const SHOULDER_2D = { tee: [262, 46], longsleeve: [258, 42], crewneck: [258, 44]
 const METHOD_LOOK = {
   dtg: { alpha: 0.95, rough: 226 }, dtf: { alpha: 1, rough: 150 }, screen: { alpha: 1, rough: 185 },
   embroidery: { alpha: 1, rough: 160, thread: true }, vinyl: { alpha: 1, rough: 90 },
+  sublimation: { alpha: 1, rough: 240 },        // dye goes into the fibre: no surface film
 };
 
 /** Where a print area sits on the 3D garment, in inches on a part. */
 export function placementOnPart(type, placement) {
   const t = SPECS[type] ? type : 'tee';
+  const w = +placement.max_w_in, h = +placement.max_h_in;
+  // All-over canvases: the body wrap starts at centre front (x = 0) and runs
+  // around both sides to the centre back; full sleeves wrap the whole sleeve
+  // (centre = outer arm). Top edge = high point of the shoulder / shoulder seam.
+  if (placement.canvas === 'wrap') {
+    if (/sleeve/.test(placement.code)) return { part: placement.code.startsWith('left') ? 'sleeve_l' : 'sleeve_r', cx: 0, cy: h / 2, w, h, rot: 0 };
+    return { part: 'front', wrap: true, cx: 0, cy: h / 2, w, h, rot: 0 };
+  }
   const g = areaGeometry(t, placement);
   if (/sleeve/.test(placement.code)) {
     const left = placement.code.startsWith('left');
@@ -157,7 +166,7 @@ export class GarmentKit {
     rctx.fillStyle = 'rgb(248,248,248)'; rctx.fillRect(0, 0, canvas.width, canvas.height);
     this.drawStitches(s, dark);
 
-    for (const a of this.areas().filter(a => a.part === s.part)) {
+    for (const a of this.areas().filter(a => a.part === s.part || (a.wrap && s.part === 'back'))) {
       const layers = st.layers.filter(l => l.placement === a.code);
       if (!layers.length) continue;
       const look = METHOD_LOOK[st.methods?.[a.code] || 'dtg'] || METHOD_LOOK.dtg;
@@ -172,17 +181,48 @@ export class GarmentKit {
         t.globalCompositeOperation = 'source-over';
       }
       const [cx, cy] = this.toPx(s, a.cx, a.cy);
-      const place = (c) => { c.save(); c.translate(cx, cy); c.rotate(a.rot * Math.PI / 180); c.translate(-w / 2, -h / 2); };
-      place(ctx); ctx.globalAlpha = look.alpha; ctx.drawImage(tmp, 0, 0); ctx.restore(); ctx.globalAlpha = 1;
+      const wrapBack = a.wrap && s.part === 'back';
+      const put = (c, src) => {
+        if (wrapBack) { this.blitWrapBack(c, src, a, s); return; }
+        c.save(); c.translate(cx, cy); c.rotate(a.rot * Math.PI / 180); c.translate(-w / 2, -h / 2); c.drawImage(src, 0, 0); c.restore();
+      };
+      ctx.globalAlpha = look.alpha; put(ctx, tmp); ctx.globalAlpha = 1;
       // roughness: the inked area gets the method's finish
       const m = scratch('m', w, h), mc = m.getContext('2d');
       mc.globalCompositeOperation = 'source-over'; mc.clearRect(0, 0, w, h); mc.drawImage(tmp, 0, 0);
       mc.globalCompositeOperation = 'source-in'; mc.fillStyle = `rgb(${look.rough},${look.rough},${look.rough})`; mc.fillRect(0, 0, w, h);
-      place(rctx); rctx.drawImage(m, 0, 0); rctx.restore();
+      put(rctx, m);
     }
     if (st.guides) this.drawGuides(s, dark);
     s.tex.needsUpdate = true; s.roughTex.needsUpdate = true;
     void spec;
+  }
+
+  /** Half the panel width (inches, along the surface) at a depth below the shoulder. */
+  wrapHalf(yDown) {
+    const L = this.spec.L;
+    return this.geo.torso.F(Math.max(0, Math.min(L, L - yDown)));
+  }
+
+  // The body wrap continues from the front around each side seam onto the
+  // back. With F = half panel width at that height:
+  //   canvas x in [ F, 2F] -> back x in [-F, 0]   (wearer's left side)
+  //   canvas x in [-2F, -F] -> back x in [0, F]   (wearer's right side)
+  // F changes with height, so the back is drawn in thin horizontal strips.
+  blitWrapBack(c, src, a, s) {
+    const ppi = s.ppi, step = 0.25, hIn = Math.min(a.h, this.spec.L + 0.5);
+    const srcX = (x) => (x + a.w / 2) * ppi;
+    for (let y = 0; y < hIn; y += step) {
+      const F = this.wrapHalf(y + step / 2);
+      const sy = y * ppi, sh = step * ppi + 0.6;
+      for (const [x0, x1, dest] of [[F, 2 * F, -F], [-2 * F, -F, 0]]) {
+        let sx0 = srcX(x0), sx1 = srcX(x1), dx = (dest + s.frame.W / 2) * ppi;
+        if (sx0 < 0) { dx -= sx0; sx0 = 0; }
+        if (sx1 > src.width) sx1 = src.width;
+        if (sx1 - sx0 <= 0.5) continue;
+        c.drawImage(src, sx0, sy, sx1 - sx0, sh, dx, sy, sx1 - sx0, sh);
+      }
+    }
   }
 
   drawStitches(s, dark) {
@@ -223,7 +263,7 @@ export class GarmentKit {
     ctx.lineWidth = Math.max(1.5, 0.05 * ppi);
     ctx.strokeStyle = dark ? 'rgba(255,255,255,.45)' : 'rgba(0,0,0,.4)';
     ctx.setLineDash([0.3 * ppi, 0.2 * ppi]);
-    ctx.strokeRect(-w / 2, -h / 2, w, h);
+    if (!a.wrap && !/_full$/.test(a.code)) ctx.strokeRect(-w / 2, -h / 2, w, h);   // whole-garment canvases have no visible box
     if (sel && sel.placement === a.code) {
       ctx.translate(-w / 2, -h / 2);
       ctx.translate(sel.x_in * ppi, sel.y_in * ppi); ctx.rotate((sel.rotation || 0) * Math.PI / 180);
@@ -245,11 +285,20 @@ export class GarmentKit {
     const r = -area.rot * Math.PI / 180, dx = p.x - area.cx, dy = p.y - area.cy;
     return { x: dx * Math.cos(r) - dy * Math.sin(r) + area.w / 2, y: dx * Math.sin(r) + dy * Math.cos(r) + area.h / 2 };
   }
+  /** A point on a part (uv) -> inches inside an area (handles the wrap onto the back). */
+  areaPoint(area, part, uv) {
+    const p = this.uvToInches(part, uv);
+    if (area.wrap && part === 'back') {
+      const F = this.wrapHalf(p.y);
+      p.x = p.x <= 0 ? 2 * F + p.x : p.x - 2 * F;
+    }
+    return this.areaLocal(area, p);
+  }
   /** -> { layer, area, local } for the topmost layer under a point, or null */
   hitLayer(part, uv) {
-    const p = this.uvToInches(part, uv), st = this.state;
-    for (const a of this.areas().filter(a => a.part === part)) {
-      const q = this.areaLocal(a, p);
+    const st = this.state;
+    for (const a of this.areas().filter(a => a.part === part || (a.wrap && part === 'back'))) {
+      const q = this.areaPoint(a, part, uv);
       if (q.x < -0.3 || q.y < -0.3 || q.x > a.w + 0.3 || q.y > a.h + 0.3) continue;
       const layers = st.layers.filter(l => l.placement === a.code);
       const hits = layers.filter(l => {
