@@ -11,6 +11,7 @@ print-on-demand clothing brand. Hosted on **Netlify**, backed by **Supabase**.
 | 2 | Products & variants, categories, collections, product pages | **Built** (read side) |
 | 2 | Cart, checkout, payments (mock + Stripe adapter), taxes, shipping, discounts | **Built** — see docs/checkout.md |
 | 3 | Custom designer + dynamic pricing engine, saved designs, quote requests | **Built** — see docs/custom-designer.md (admin pricing screens arrive with the admin panel) |
+| 3 | Real-time 3D garments, drag-on-garment, 3D mockups, live camera try-on | **Built** — three.js r180 vendored in `public/vendor/three` |
 | 4 | Orders, order history, customer tracking | **Partly built** (orders, append-only history, tracking page); fulfillment statuses arrive with Phase 7 |
 | 5 | Limited drops, numbering, sold-out → archive | **Built**, including purchase with reservation-safe numbering |
 | 6 | Moderation | **Partly built**: automated checks (file bytes, unsafe SVG, resolution, term list) gate the bag; human review queue is next |

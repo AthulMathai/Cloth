@@ -107,3 +107,41 @@ come with the admin panel.
 
 Admin screens for pricing rules / calculator / quotes, the human moderation queue,
 AI generation (Phase 10), side-view mockups.
+
+## 3D studio and live try-on
+
+The designer opens in **3D** by default (WebGL 2 required; otherwise it falls back to
+the flat editor). Toolbar: **3D · Flat · Try on**.
+
+**3D garments** (`public/js/three/`) are generic blanks modelled in code — tee,
+longsleeve, crewneck, hoodie (hood, drawstrings, kangaroo pocket, ribbed cuffs and
+waistband) and tank — so no model files need downloading. They are built the way a
+pattern maker works, in inches: front and back panels, set-in sleeves, rib bands.
+Every printable part's UVs are **inches of fabric** (torso: across from the centre
+line × down from the high point of the shoulder; sleeves: around × down the sleeve),
+so a 12 in print covers exactly 12 in of fabric and follows its wrinkles.
+
+| File | What it does |
+|---|---|
+| `garment-model.js` | garment specs (inches) and geometry: panels, sleeves, hood, pocket, ribbing |
+| `fabric.js` | procedural jersey / fleece / rib normal maps; fabric material (cotton sheen, plain inside) |
+| `kit.js` | turns the design into per-part textures with the **same layer renderer as the production files** (clipped to the same print areas); print-method finish (DTF/vinyl glossier, embroidery thread texture); hit-testing |
+| `studio.js` | viewer: studio lighting, orbit, front/back/sleeve views, drag artwork on the garment, 3D mockup render |
+| `tryon.js` | camera try-on |
+
+Colour, size, layers, method changes update the 3D view live. Dragging artwork on
+the 3D garment moves the layer (same config, same undo history). Saved mockups are
+3D product shots when the 3D view is running, flat drawings otherwise. Production
+files are unchanged (flat PNG per print area at 150 dpi).
+
+**Try on** opens the camera (or a photo). Body tracking (MediaPipe Pose Landmarker,
+runs on-device, loaded on demand from jsDelivr / Google model storage — URLs in
+`POSE_CONFIG`) places, scales and turns the garment from the shoulders, sets length
+from the hips and bends the sleeves along the arms. An invisible body shape hides the
+garment's inside. If tracking can't load, the garment can be dragged / pinched into
+place. Mirror toggle, colour swatches, fit slider, snapshot download. Nothing is
+uploaded; the page says so. `netlify.toml` allows `camera=(self)`.
+
+To swap in real scanned/modelled garments later, replace the geometry in
+`garment-model.js` for a type; the print pipeline only needs meshes with
+`userData.part` and inch-based UVs.

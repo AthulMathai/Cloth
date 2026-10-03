@@ -5,6 +5,7 @@ import { esc, garmentSVG } from '../components/ui.js';
 import { isDark } from '../components/garment.js';
 import { track } from '../lib/analytics.js';
 import { addDesignToBag } from '../lib/cart.js';
+import { webglAvailable } from '../three/studio.js';
 import {
   loadCatalogue, placementsFor, areaGeometry, printSummary, readArtwork, uploadArtwork, renderMockup, renderProduction,
   measureText, FONTS, TEXT_FONT_SIZE, UNITS_PER_INCH, VIEWBOX,
@@ -42,6 +43,9 @@ export async function load({ id }) {
         <aside class="dz-panel" data-panel aria-label="Design options"></aside>
         <div class="dz-stage-col">
           <div class="dz-toolbar" role="toolbar" aria-label="Canvas">
+            <div class="seg dz-mode" role="group" aria-label="Preview">
+              <button data-mode="3d" aria-pressed="false">3D</button><button data-mode="2d" aria-pressed="false">Flat</button><button data-mode="tryon" aria-pressed="false" class="dz-tryon-btn">Try on</button>
+            </div>
             <div class="seg" role="group" aria-label="View">
               <button data-view="front" aria-pressed="true">Front</button><button data-view="back" aria-pressed="false">Back</button>
             </div>
@@ -57,6 +61,7 @@ export async function load({ id }) {
           </div>
           <div class="dz-stage" data-stage tabindex="0" aria-label="Design canvas. Arrow keys move the selected layer.">
             <div class="dz-canvas" data-canvas></div>
+            <div class="dz-3d" data-3d hidden><p class="dz-3d-status" data-3d-status>Loading 3D…</p></div>
             <div class="dz-drop" aria-hidden="true">Drop your image here</div>
           </div>
           <p class="dz-hint muted small" data-hint>Drag to move. Pull the corner to resize, the top dot to rotate.</p>
@@ -83,7 +88,9 @@ function mountDesigner(root, cat, saved) {
     status: saved?.status || null, approvedVersion: saved?.approved_version || null, moderation: saved?.moderation || null,
     decision: saved?.decision_note || null,
     dirty: false, art: {}, history: [], future: [], zoom: 1, quote: null, tiers: null, busy: false, msg: '',
+    mode: webglAvailable() ? (sessionStorage.getItem('dz-mode') || '3d') : '2d',
   };
+  if (S.mode === 'tryon') S.mode = '3d';
   S.config.methods ||= {}; S.config.services ||= [];
   if (saved) {
     const v = S.product.variants.find(v => v.id === saved.variant_id);
@@ -92,6 +99,7 @@ function mountDesigner(root, cat, saved) {
   S.color ||= S.product.variants[0].color;
   S.size ||= (S.product.variants.find(v => v.color === S.color && v.size === 'M') || S.product.variants[0]).size;
   let unloaded = false, priceTimer = 0, scale = 1;
+  let kit = null, studio = null, tryon = null, three = null, syncRaf = 0;
 
   const placements = () => placementsFor(cat, S.product.product_type);
   const pl = (code) => cat.placements.find(p => p.code === code);
@@ -146,6 +154,8 @@ function mountDesigner(root, cat, saved) {
       }).join('');
     c.classList.toggle('is-dark', isDark(colorHex()));
     root.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === S.view));
+    renderMode();
+    sync3d();
   }
   function layerStyle(l) {
     const u = UNITS_PER_INCH * scale;
@@ -167,11 +177,13 @@ function mountDesigner(root, cat, saved) {
     el.setAttribute('style', layerStyle(l));
     const t = el.querySelector('.dz-text');
     if (t) t.style.fontSize = `${l.h_in * UNITS_PER_INCH * scale * TEXT_FONT_SIZE}px`;
+    sync3dSoon();
   }
 
   // pointer interactions (mouse, pen and touch)
   let drag = null;
   root.querySelector('[data-stage]').addEventListener('pointerdown', (e) => {
+    if (e.target.closest('[data-3d]')) return;
     const handle = e.target.closest('[data-handle]');
     const lel = e.target.closest('[data-layer]');
     const ael = e.target.closest('[data-area]');
@@ -298,6 +310,86 @@ function mountDesigner(root, cat, saved) {
     l.w_in = round2(w); l.h_in = round2(h);
   }
 
+  // ---------- 3D studio + try-on ----------
+  function renderMode() {
+    const is3d = S.mode === '3d';
+    $('[data-canvas]').hidden = is3d;
+    $('[data-3d]').hidden = !is3d;
+    $('[data-stage]').classList.toggle('is-3d', is3d);
+    root.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === S.mode || (b.dataset.mode === '3d' && S.mode === 'tryon')));
+    const hint = $('[data-hint]');
+    if (hint) hint.textContent = is3d
+      ? 'Drag to turn the garment. Drag your artwork to move it; resize and rotate in the panel.'
+      : 'Drag to move. Pull the corner to resize, the top dot to rotate.';
+    if (is3d && !studio) start3d();
+  }
+  async function loadThree() {
+    three ||= Promise.all([import('../three/kit.js'), import('../three/studio.js')]).then(([k, s]) => ({ ...k, ...s }));
+    return three;
+  }
+  async function ensureKit() {
+    const m = await loadThree();
+    if (!kit) {
+      kit = new m.GarmentKit({ ppi: matchMedia('(max-width: 820px)').matches ? 30 : 40 });
+      sync3d();
+    }
+    return { m, kit };
+  }
+  async function start3d() {
+    const host = $('[data-3d]');
+    try {
+      const { m } = await ensureKit();
+      if (unloaded || studio) return;
+      studio = m.createStudio(host, kit, {
+        onPick(id) {
+          const l = layer(id); if (!l) return;
+          if (S.selected !== id) { S.selected = id; S.active = l.placement; S.view = pl(l.placement).view; renderPanel(); sync3d(); }
+        },
+        onMove(id, x, y) { const l = layer(id); if (!l) return; l.x_in = round2(x); l.y_in = round2(y); updateLayerEl(l); },
+        onDragEnd(id, moved) { if (moved) commit(); renderStage(); renderPanel(); },
+      });
+      host.querySelector('[data-3d-status]')?.remove();
+      studio.setView(viewFor(S.active), { instant: true });
+      track('design_3d_viewed', { product_type: S.product.product_type });
+    } catch (e) {
+      console.error(e);
+      host.querySelector('[data-3d-status]').textContent = '3D preview isn\'t available on this device. Showing the flat view.';
+      setTimeout(() => setMode('2d'), 1600);
+    }
+  }
+  function sync3d() {
+    if (!kit) return;
+    kit.setGarment({ type: S.product.product_type, color: colorHex(), size: S.size });
+    kit.setDesign({ layers: S.config.layers, placements: placements(), art: S.art, methods: S.config.methods,
+                    selected: S.selected, active: S.active, guides: S.mode === '3d' && !tryon });
+  }
+  function sync3dSoon() {
+    if (!kit || syncRaf) return;
+    syncRaf = requestAnimationFrame(() => { syncRaf = 0; sync3d(); });
+  }
+  const viewFor = (code) => /sleeve/.test(code || '') ? code.replace(/^(left|right)_sleeve$/, (m0, side) => `sleeve_${side[0]}`) : (pl(code)?.view || S.view);
+  function setMode(mode) {
+    if (mode === 'tryon') { openTryOn(); return; }
+    S.mode = mode;
+    try { sessionStorage.setItem('dz-mode', mode); } catch {}
+    renderStage();
+  }
+  async function openTryOn() {
+    if (tryon) return;
+    try {
+      const { kit: k } = await ensureKit();
+      sync3d();
+      const { openTryOn: open } = await import('../three/tryon.js');
+      const colors = [...new Map(S.product.variants.map(v => [v.color, v])).values()].map(v => ({ name: v.color, hex: v.color_hex }));
+      tryon = open(k, {
+        title: `${S.product.name} · ${S.color}`, colors, color: S.color,
+        onColor(name) { S.color = name; if (!variant()) S.size = S.product.variants.find(v => v.color === S.color).size; renderStage(); commit(); renderPanel(); return `${S.product.name} · ${S.color}`; },
+        onClose() { tryon = null; studio?.invalidate(); sync3d(); },
+      });
+      track('tryon_opened', { product_type: S.product.product_type });
+    } catch (e) { console.error(e); flash('Try-on couldn\'t start on this device.'); }
+  }
+
   // ---------- left panel ----------
   function renderPanel() {
     const p = S.product, sizes = p.variants.filter(v => v.color === S.color);
@@ -351,7 +443,8 @@ function mountDesigner(root, cat, saved) {
             <label class="field"><span>Font</span><select data-prop="font">${Object.keys(FONTS).map(f => `<option value="${f}"${sel.font === f ? ' selected' : ''} style="font-family:${FONTS[f]}">${f[0].toUpperCase() + f.slice(1)}</option>`).join('')}</select></label>
             <div class="dz-colors" role="group" aria-label="Text colour">${TEXT_COLORS.map(c => `<button class="swatch swatch--sm" style="background:${c}" data-text-color="${c}" aria-label="Colour ${c}" aria-pressed="${sel.color === c}"></button>`).join('')}
               <input type="color" data-prop="color" value="${esc(sel.color)}" aria-label="Custom colour"></div>` : ''}
-          <div class="dz-readout"><span>${sel.w_in.toFixed(1)} × ${sel.h_in.toFixed(1)} in</span>
+          <label class="dz-range"><span>Size</span><input type="range" data-prop="width" min="0.5" step="0.1" max="${maxWidth(sel).toFixed(1)}" value="${sel.w_in}" aria-label="Artwork width in inches"></label>
+          <div class="dz-readout"><span data-size-readout>${sel.w_in.toFixed(1)} × ${sel.h_in.toFixed(1)} in</span>
             <label>Rotate <input type="number" data-prop="rotation" min="0" max="359" value="${sel.rotation || 0}">°</label>
             <button class="linklike" data-act="center">Center</button></div>
           ${dpi ? `<p class="small ${dpi < 90 ? 'dz-warn' : dpi < 150 ? 'dz-caution' : 'muted'}">${dpi} DPI at this size${dpi < 90 ? ' — will print blurry. Make it smaller or use a bigger image.' : dpi < 150 ? ' — edges may look soft.' : ' — prints sharp.'}</p>` : ''}
@@ -382,9 +475,10 @@ function mountDesigner(root, cat, saved) {
       if (!variant()) S.size = S.product.variants.find(v => v.color === S.color).size;
       renderStage(); commit(); renderPanel();
     } else if (d.size) { S.size = d.size; commit(); renderPanel(); }
-    else if (d.pickArea) { S.active = d.pickArea; S.view = pl(d.pickArea).view; S.selected = null; renderStage(); renderPanel(); }
-    else if (d.view) { S.view = d.view; S.active = placements().find(p => p.view === S.view)?.code || S.active; S.selected = null; renderStage(); renderPanel(); }
-    else if (d.select) { const l = layer(d.select); S.selected = l.id; S.active = l.placement; S.view = pl(l.placement).view; renderStage(); renderPanel(); }
+    else if (d.mode) setMode(d.mode);
+    else if (d.pickArea) { S.active = d.pickArea; S.view = pl(d.pickArea).view; S.selected = null; renderStage(); renderPanel(); studio?.setView(viewFor(d.pickArea)); }
+    else if (d.view) { S.view = d.view; S.active = placements().find(p => p.view === S.view)?.code || S.active; S.selected = null; renderStage(); renderPanel(); studio?.setView(d.view); }
+    else if (d.select) { const l = layer(d.select); S.selected = l.id; S.active = l.placement; S.view = pl(l.placement).view; renderStage(); renderPanel(); studio?.setView(viewFor(l.placement)); }
     else if (d.move) moveLayer(d.move, Number(d.dir));
     else if (d.removeLayer) removeLayer(d.removeLayer);
     else if (d.textColor) { const l = layer(S.selected); l.color = d.textColor; renderStage(); commit(); renderPanel(); }
@@ -392,8 +486,8 @@ function mountDesigner(root, cat, saved) {
     else if (d.act === 'text') addText();
     else if (d.act === 'undo') undo();
     else if (d.act === 'redo') redo();
-    else if (d.act === 'zoom-in') { S.zoom = Math.min(2.5, S.zoom + 0.25); renderStage(); }
-    else if (d.act === 'zoom-out') { S.zoom = Math.max(0.75, S.zoom - 0.25); renderStage(); }
+    else if (d.act === 'zoom-in') { if (S.mode === '3d' && studio) studio.zoom(0.82); else { S.zoom = Math.min(2.5, S.zoom + 0.25); renderStage(); } }
+    else if (d.act === 'zoom-out') { if (S.mode === '3d' && studio) studio.zoom(1.22); else { S.zoom = Math.max(0.75, S.zoom - 0.25); renderStage(); } }
     else if (d.act === 'reset') { if (S.config.layers.length && !confirmInline(t, 'Remove all artwork?')) return;
       S.config.layers = []; S.selected = null; renderStage(); commit(); }
     else if (d.act === 'center') { const l = layer(S.selected), m = pl(l.placement); l.x_in = round2(m.max_w_in / 2); renderStage(); commit(); }
@@ -422,8 +516,18 @@ function mountDesigner(root, cat, saved) {
       const l = layer(S.selected); l.text = t.value || ' '; refitText(l);
       const el = root.querySelector(`[data-layer="${l.id}"] .dz-text`); if (el) el.textContent = l.text;
       updateLayerEl(l); clearTimeout(kbTimer); kbTimer = setTimeout(commit, 400);
+    } else if (t.dataset.prop === 'width') {
+      const l = layer(S.selected); if (!l) return;
+      const w = clamp(Number(t.value) || l.w_in, 0.5, maxWidth(l)), k = w / l.w_in;
+      l.w_in = round2(w); l.h_in = round2(l.h_in * k);
+      const ro = root.querySelector('[data-size-readout]'); if (ro) ro.textContent = `${l.w_in.toFixed(1)} × ${l.h_in.toFixed(1)} in`;
+      updateLayerEl(l); clearTimeout(kbTimer); kbTimer = setTimeout(() => { commit(); renderPanel(); }, 350);
     } else if (t.matches('[data-name]')) { S.dirty = true; renderActions(); }
   });
+  function maxWidth(l) {
+    const m = pl(l.placement);
+    return Math.max(0.5, Math.min(+m.max_w_in, +m.max_h_in * (l.w_in / l.h_in)));
+  }
 
   // ---------- price ----------
   function setQty(n) {
@@ -544,7 +648,9 @@ function mountDesigner(root, cat, saved) {
     const mockups = {}, production = {};
     for (const view of ['front', 'back']) {
       if (view === 'back' && !used.some(p => p.view === 'back')) continue;
-      const blob = await renderMockup(S.config, S.product, colorHex(), view, placements(), S.art);
+      let blob = null;
+      if (studio) { try { sync3d(); blob = await studio.mockup(view); } catch (e) { console.warn('3D mockup failed, using flat', e); } }
+      blob ||= await renderMockup(S.config, S.product, colorHex(), view, placements(), S.art);
       const path = `${uid}/${S.designKey}/v${v}-${view}.png`;
       await storage.upload('mockups', path, blob, 'image/png');
       mockups[view] = path;
@@ -640,7 +746,10 @@ function mountDesigner(root, cat, saved) {
   addEventListener('resize', onResize);
   const onUnload = (e) => { if (S.dirty) { e.preventDefault(); e.returnValue = ''; } };
   addEventListener('beforeunload', onUnload);
-  return () => { unloaded = true; removeEventListener('resize', onResize); removeEventListener('beforeunload', onUnload); clearTimeout(priceTimer); };
+  return () => {
+    unloaded = true; removeEventListener('resize', onResize); removeEventListener('beforeunload', onUnload); clearTimeout(priceTimer);
+    cancelAnimationFrame(syncRaf); tryon?.close(); studio?.dispose(); studio = null;
+  };
 }
 
 const clamp = (n, a, b) => Math.min(b, Math.max(a, n));

@@ -157,7 +157,7 @@ export function measureText(text, font) {
   return Math.max(0.3, w / (100 / TEXT_FONT_SIZE));      // width : height ratio of the box
 }
 
-function drawLayer(ctx, l, img, ppi) {
+export function drawLayer(ctx, l, img, ppi) {
   ctx.save();
   ctx.translate(l.x_in * ppi, l.y_in * ppi);
   ctx.rotate((l.rotation || 0) * Math.PI / 180);
