@@ -278,9 +278,26 @@ export class GarmentKit {
     add(geo.front, mats.front, 'front');
     add(geo.back, mats.back, 'back');
     if (geo.pocket) add(geo.pocket.geometry, mats.front, 'front');
-    for (const g of geo.plain) add(g, g.userData.hood ? mats.hood : mats.plain);
-    for (const g of geo.rib) add(g, mats.rib);
-    for (const g of geo.trim) add(g, mats.trim);
+    const roles = { hoodDown: [], cords: [], tips: [], torso: [] };
+    for (const g of geo.plain) {
+      const m = add(g, g.userData.hood ? mats.hood : mats.plain);
+      if (g.userData.hood) m.userData.role = 'hoodDown';
+      if (g.userData.role === 'hoodDown') roles.hoodDown.push(m);
+      if (g.userData.role === 'cord') roles.cords.push(m);
+    }
+    for (const g of geo.rib) roles.torso.push(add(g, mats.rib));
+    for (const g of geo.trim) { const m = add(g, mats.trim); if (g.userData.role === 'tip') roles.tips.push(m); }
+    // hood pulled up: hinged at the back of the neck so it can be pulled over
+    let hoodPivot = null, hoodMesh = null, hood = 0;
+    if (geo.hoodUp) {
+      hoodPivot = new THREE.Group();
+      hoodPivot.position.copy(geo.hoodUp.userData.pivot);
+      hoodMesh = new THREE.Mesh(geo.hoodUp, mats.hood);
+      hoodMesh.castShadow = shadows; hoodMesh.receiveShadow = shadows;
+      hoodMesh.position.copy(geo.hoodUp.userData.pivot).negate();
+      hoodPivot.add(hoodMesh); group.add(hoodPivot);
+      hoodPivot.visible = false;
+    }
     const label = add(geo.label, mats.label); label.castShadow = false;
     const sleeves = {};
     if (geo.sleeves) {
@@ -291,7 +308,18 @@ export class GarmentKit {
     }
     const kit = this;
     return {
-      group, picks, geo,
+      group, picks, geo, roles, sleeves, hoodMesh,
+      get hood() { return hood; },
+      /** 0 = hood down on the back, 1 = pulled up over the head (in between animates). */
+      setHood(p) {
+        hood = Math.min(1, Math.max(0, p));
+        if (!hoodPivot) return;
+        const e = hood * hood * (3 - 2 * hood);
+        for (const m of roles.hoodDown) m.visible = hood < 0.45;
+        hoodPivot.visible = hood > 0.2;
+        hoodPivot.rotation.x = -(1 - e) * 2.2;            // swings up from lying on the back
+        hoodPivot.scale.set(1, 0.55 + 0.45 * e, 0.6 + 0.4 * e);
+      },
       /** Pose a sleeve along an arm path {shoulder, elbow, wrist}; null restores the default. */
       setArm(side, arm) {
         const s = sleeves[side];

@@ -354,7 +354,7 @@ function buildNeckBand(torso, spec) {
 }
 
 // Tube with a variable (elliptical) cross-section along a polyline of centres.
-function tubeAlong(centres0, radius, { closed = false, seg = 16, flat = 1, normals: normals0 = null } = {}) {
+export function tubeAlong(centres0, radius, { closed = false, seg = 16, flat = 1, normals: normals0 = null } = {}) {
   const centres = closed ? [...centres0, centres0[0]] : centres0;
   const normals = normals0 && closed ? [...normals0, normals0[0]] : normals0;
   const pos = [], nrm = [], uv = [], n = centres.length, m = centres0.length;
@@ -581,10 +581,51 @@ function buildHood(torso, spec) {
     const dir = last.clone().sub(prev).normalize();
     tip.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir));
     tip.translate(...last.clone().addScaledVector(dir, 0.5).toArray());
+    g.userData = { role: 'cord', points: pts.map(p => p.clone()) };
+    tip.userData = { role: 'tip' };
     strings.push({ cord: g, tip });
     void front;
   }
-  return { roll, skirt, bag, strings };
+  for (const g of [roll, skirt, bag]) g.userData.role = 'hoodDown';
+  const hoodUp = buildHoodUp(torso, spec, loop);
+  return { roll, skirt, bag, strings, up: hoodUp };
+}
+
+// Hood pulled up, shaped around an (invisible) head. Its bottom row is the
+// neckline itself, so it stays sewn on. Attribute hoodW (0 at the neck, 1 at
+// the crown) lets the try-on fit it to the wearer's head.
+export const HOOD_HEAD = { y: 4.7, z: -0.9, width: 6 };
+function buildHoodUp(torso, spec, loop0) {
+  const C = new THREE.Vector3(0, spec.L + HOOD_HEAD.y, HOOD_HEAD.z), rx = 4.55, ry = 6.5, rz = 5.3;
+  // start at the centre front so the face opening is the seam of the grid
+  const k0 = loop0.findIndex(l => l.side === 'front' && l.p.x >= 0);
+  const loop = [...loop0.slice(k0), ...loop0.slice(0, k0)];
+  const ROWS = 30, n = loop.length, pos = [], nrm = [], w = [];
+  for (let r = 0; r < ROWS; r++) {
+    const t = r / (ROWS - 1);
+    const amax = lerp(Math.PI, 0.6 * Math.PI, smooth(0.2, 0.5, t));     // crossover covers the throat
+    const e = lerp(-0.62, Math.PI / 2 - 0.05, t);
+    for (let i = 0; i <= n; i++) {
+      const l = loop[i % n];
+      // the extra last column closes the crossover at the throat and lies on
+      // the same edge as its neighbour higher up (no skin across the face)
+      const ang = i === n ? -Math.abs(Math.atan2(l.p.x, -(l.p.z - C.z))) : Math.atan2(l.p.x, -(l.p.z - C.z));
+      const a = clamp(ang, -amax, amax);
+      const open = Math.abs(ang) > amax ? 1 : 0;                         // columns gathered on the face opening
+      const sx = Math.sin(a), cz = Math.cos(a), ce = Math.cos(e);
+      const S = new THREE.Vector3(C.x + rx * ce * sx * (1 + 0.04 * open), C.y + ry * Math.sin(e), C.z - rz * ce * cz + 0.25 * open);
+      const fold = 0.12 * noise3(S.x / 2.5, S.y / 2.5, S.z / 2.5) + 0.1 * Math.sin(t * 9 + a * 2) * t;
+      const out = S.clone().sub(C).normalize();
+      S.addScaledVector(out, fold);
+      const p = l.p.clone().lerp(S, smooth(0, 0.3, t));
+      pos.push(p.x, p.y, p.z); nrm.push(out.x, out.y, out.z); w.push(t);
+    }
+  }
+  const g = gridGeometry(ROWS, n + 1, pos, nrm, null);
+  g.computeVertexNormals();
+  g.setAttribute('hoodW', new THREE.Float32BufferAttribute(w, 1));
+  g.userData = { role: 'hoodUp', head: C.clone(), pivot: new THREE.Vector3(0, spec.L - spec.neck.back, loop.reduce((m, l) => Math.min(m, l.p.z), 0)) };
+  return g;
 }
 
 // Hood lying down on the upper back: a rounded panel that hugs the back
@@ -727,6 +768,7 @@ export function buildGarmentGeometry(type) {
     const h = buildHood(torso, spec);
     out.plain.push(h.roll, h.skirt, h.bag, ...h.strings.map(s => s.cord));
     out.trim.push(...h.strings.map(s => s.tip));
+    out.hoodUp = h.up;
   }
   if (spec.pocket) out.pocket = buildPocket(torso, spec);
   if (spec.sleeve) {

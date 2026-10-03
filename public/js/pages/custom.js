@@ -57,6 +57,7 @@ export async function load({ id }) {
               <button data-act="zoom-out" aria-label="Zoom out">−</button>
               <button data-act="zoom-in" aria-label="Zoom in">+</button>
             </div>
+            <button class="seg-solo" data-act="hood" hidden aria-pressed="false">Hood up</button>
             <button class="linklike" data-act="reset">Reset</button>
           </div>
           <div class="dz-stage" data-stage tabindex="0" aria-label="Design canvas. Arrow keys move the selected layer.">
@@ -322,6 +323,11 @@ function mountDesigner(root, cat, saved) {
       ? 'Drag to turn the garment. Drag your artwork to move it; resize and rotate in the panel.'
       : 'Drag to move. Pull the corner to resize, the top dot to rotate.';
     if (is3d && !studio) start3d();
+    const hb = $('[data-act="hood"]');
+    if (hb) {
+      hb.hidden = !(is3d && S.product.product_type === 'hoodie');
+      const up = !!studio?.hood; hb.setAttribute('aria-pressed', up); hb.textContent = up ? 'Hood down' : 'Hood up';
+    }
   }
   async function loadThree() {
     three ||= Promise.all([import('../three/kit.js'), import('../three/studio.js')]).then(([k, s]) => ({ ...k, ...s }));
@@ -482,6 +488,7 @@ function mountDesigner(root, cat, saved) {
     else if (d.move) moveLayer(d.move, Number(d.dir));
     else if (d.removeLayer) removeLayer(d.removeLayer);
     else if (d.textColor) { const l = layer(S.selected); l.color = d.textColor; renderStage(); commit(); renderPanel(); }
+    else if (d.act === 'hood') { studio?.setHood(!studio.hood); renderMode(); }
     else if (d.act === 'upload') $('[data-file]').click();
     else if (d.act === 'text') addText();
     else if (d.act === 'undo') undo();

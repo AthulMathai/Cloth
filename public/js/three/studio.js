@@ -69,11 +69,13 @@ export function createStudio(host, kit, { onPick, onMove, onDragEnd } = {}) {
   renderer.domElement.addEventListener('wheel', () => { userZoomed = true; }, { passive: true });
 
   let inst = null, fit = 70, needs = true, raf = 0, tween = null, alive = true, visible = true, userZoomed = false;
+  let hoodNow = 0, hoodTarget = 0, lastFrame = performance.now();
 
   function mount() {
     inst?.dispose();
     inst = kit.instance();
     scene.add(inst.group);
+    inst.setHood(hoodNow);
     const h = kit.geo.height;
     controls.target.set(0, h * 0.5 - 0.8, 0);
     frame();
@@ -140,6 +142,11 @@ export function createStudio(host, kit, { onPick, onMove, onDragEnd } = {}) {
       apply(s);
       if (t >= 1) tween = null;
     }
+    const now = performance.now(), dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
+    if (hoodNow !== hoodTarget && inst) {
+      hoodNow += Math.sign(hoodTarget - hoodNow) * Math.min(Math.abs(hoodTarget - hoodNow), reduced ? 1 : dt * 2.2);
+      inst.setHood(hoodNow); needs = true;
+    }
     const moved = controls.update();
     if (moved || needs) { renderer.render(scene, camera); needs = false; }
   }
@@ -205,6 +212,9 @@ export function createStudio(host, kit, { onPick, onMove, onDragEnd } = {}) {
   return {
     renderer, scene, camera, rig,
     setView, zoom,
+    get hasHood() { return !!kit.geo?.hoodUp; },
+    get hood() { return hoodTarget; },
+    setHood(v) { hoodTarget = v ? 1 : 0; needs = true; },
     get instance() { return inst; },
     invalidate() { needs = true; },
     /** Opaque product shot of one view, used as the saved mockup. */

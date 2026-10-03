@@ -633,6 +633,8 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 400; line-height: 1;
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
 .dz-toolbar .linklike { margin-left: auto; }
+.seg-solo { border: 1px solid var(--line); background: var(--bg); color: inherit; padding: 8px 14px; min-height: 40px; cursor: pointer; font-weight: 700; font-size: 15px; }
+.seg-solo[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
 .dz-stage { position: relative; background: var(--surface); color: var(--surface-fg); min-height: 420px; overflow: auto; display: grid; place-items: center;
   padding: 16px; box-shadow: 0 30px 80px rgba(0, 0, 0, .5), inset 0 0 120px rgba(120, 100, 60, .12); touch-action: none; outline: none; }
 .dz-stage:focus-visible { box-shadow: 0 0 0 3px var(--accent), 0 30px 80px rgba(0, 0, 0, .5); }
@@ -689,8 +691,11 @@ html.tryon-open { overflow: hidden; }
 .tryon-close { width: 42px; padding: 0; font-size: 18px; }
 .tryon-stage { position: relative; justify-self: center; align-self: center; width: min(100%, calc((100vh - 170px) * 16 / 9)); max-height: calc(100vh - 170px);
   aspect-ratio: 16 / 9; background: #111; overflow: hidden; touch-action: none; }
-.tryon-stage video, .tryon-stage img, .tryon-gl { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.tryon-stage video.is-mirror { transform: scaleX(-1); }
+.tryon-gl { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.tryon-gl.is-mirror { transform: scaleX(-1); }
+.tryon-src { position: absolute; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; pointer-events: none; }
+.tryon-tip { position: absolute; left: 50%; top: 14px; translate: -50% 0; margin: 0; padding: 6px 12px; background: rgba(0, 0, 0, .55);
+  font-size: 13px; border-radius: 999px; white-space: nowrap; max-width: 92%; overflow: hidden; text-overflow: ellipsis; }
 .tryon-msg { position: absolute; left: 50%; bottom: 16px; translate: -50% 0; max-width: min(92%, 520px); padding: 10px 16px; background: rgba(0, 0, 0, .72);
   border: 1px solid rgba(255, 255, 255, .15); text-align: center; font-size: 15px; }
 .tryon-msg[hidden] { display: none; }

@@ -134,13 +134,30 @@ the 3D garment moves the layer (same config, same undo history). Saved mockups a
 3D product shots when the 3D view is running, flat drawings otherwise. Production
 files are unchanged (flat PNG per print area at 150 dpi).
 
-**Try on** opens the camera (or a photo). Body tracking (MediaPipe Pose Landmarker,
-runs on-device, loaded on demand from jsDelivr / Google model storage — URLs in
-`POSE_CONFIG`) places, scales and turns the garment from the shoulders, sets length
-from the hips and bends the sleeves along the arms. An invisible body shape hides the
-garment's inside. If tracking can't load, the garment can be dragged / pinched into
-place. Mirror toggle, colour swatches, fit slider, snapshot download. Nothing is
-uploaded; the page says so. `netlify.toml` allows `camera=(self)`.
+**Try on** opens the camera (or a photo). Per frame (`tryon.js`):
+
+- **Tracking**: MediaPipe Pose Landmarker (full model on desktop, lite on phones;
+  on-device, loaded on demand — URLs in `POSE_CONFIG`) with world landmarks and a
+  body silhouette mask.
+- **Fit**: true-to-size scale from the real torso length (pixels per metre from
+  image vs world landmarks), size grading (S…3XL), anchored at the shoulder joints;
+  full 360° facing from the 3D shoulder line (with a face-visibility check), so the
+  back of the garment shows when the wearer turns round; tilt, lean and hip twist; the
+  torso is reshaped per height band to the silhouette; sleeves rebuilt along the arms.
+- **Cloth motion**: hem/hood sway on a damped spring driven by body acceleration;
+  drawstrings simulated as Verlet cords; hood up/down by gesture (reach behind the
+  neck and pull over the head; reach up and pull down to take it off) or button, fitted
+  to the wearer's head.
+- **Look**: garment rendered off-screen, then composited with the room's measured
+  brightness, colour and light direction, soft edges, camera grain, and contact
+  shadows limited to the body silhouette. Head, hands and bare forearms hide the
+  garment behind them; an invisible body hides its inside.
+- Mirror view like a mirror; snapshots are saved un-mirrored so prints read correctly.
+  Manual drag/pinch fit if tracking can't load. Nothing is uploaded.
+
+Limits: this is a fitted, animated 3D garment, not a full cloth simulation — fabric
+doesn't fold against the body as you bend, and fast movement or loose sleeves over
+the hands can look off. Lighting matching is approximate.
 
 To swap in real scanned/modelled garments later, replace the geometry in
 `garment-model.js` for a type; the print pipeline only needs meshes with
