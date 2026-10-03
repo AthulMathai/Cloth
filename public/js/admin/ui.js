@@ -18,6 +18,8 @@ const TONE = {
   active: 'good', draft: 'mute', scheduled: 'info', out_of_stock: 'warn', sold_out: 'warn', discontinued: 'mute', archived: 'mute',
   pending: 'warn', needs_review: 'warn', rejected: 'bad', new: 'warn', reviewing: 'info', quoted: 'info', accepted: 'good',
   declined: 'mute', expired: 'mute', converted: 'good',
+  in_production: 'info', printed: 'info', label_created: 'info', exception: 'bad', onboarding: 'warn', inactive: 'mute', suspended: 'bad',
+  critical: 'bad', warning: 'warn', info: 'info', sent: 'good', not_required: 'mute',
 };
 export const pill = (s, text) => `<span class="cc-pill cc-pill--${TONE[s] || 'mute'}">${esc(text || label(s))}</span>`;
 

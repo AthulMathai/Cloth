@@ -26,6 +26,9 @@ const LABEL = {
   failed: 'Payment failed', on_hold: 'On hold — we\'ll be in touch', backordered: 'Backordered', returned: 'Returned',
 };
 
+const SHIP_LABEL = { label_created: 'Label created — waiting for pickup', in_transit: 'In transit', out_for_delivery: 'Out for delivery',
+  delivered: 'Delivered', exception: 'Delivery problem — the carrier is on it', returned: 'Returned to sender' };
+
 export async function load({ number }, query) {
   const theme = await themeForPage('account');
   if (!number) return listOrders(theme);
@@ -55,6 +58,16 @@ export async function load({ number }, query) {
       </div>
       <div class="checkout-layout">
         <div class="panel-box">
+          ${(o.shipments || []).map(sh => `<div class="track-card">
+            <div class="track-head"><div><span class="muted small">${esc(sh.carrier)}${sh.service ? ' · ' + esc(sh.service) : ''}</span>
+              <strong class="track-status">${esc(SHIP_LABEL[sh.status] || sh.status)}</strong></div>
+              ${sh.tracking_url ? `<a class="btn btn--ghost" href="${esc(sh.tracking_url)}" target="_blank" rel="noopener">Track ${esc(sh.tracking_number)}</a>` : `<span class="muted small">Tracking ${esc(sh.tracking_number)}</span>`}</div>
+            ${sh.estimated_delivery && sh.status !== 'delivered' ? `<p class="small">Estimated delivery ${new Date(sh.estimated_delivery + 'T12:00').toLocaleDateString('en-CA', { weekday: 'short', month: 'short', day: 'numeric' })}</p>` : ''}
+            ${(sh.events || []).length ? `<ul class="track-scans">${sh.events.map(e => `<li><span>${esc(e.description || SHIP_LABEL[e.status] || e.status)}${e.location ? ` — ${esc(e.location)}` : ''}</span>
+              <time class="muted small" datetime="${e.at}">${new Date(e.at).toLocaleString('en-CA', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</time></li>`).join('')}</ul>` : ''}
+            ${/test carrier/i.test(sh.carrier) ? '<p class="test-flag small">Development test carrier — no real parcel.</p>' : ''}
+          </div>`).join('')}
+          ${o.production && !(o.shipments || []).length ? `<p class="muted small">Being made in ${esc(o.production.city || '')}${o.production.province ? ', ' + esc(o.production.province) : ''}.</p>` : ''}
           <h2 class="sub-head">Progress</h2>
           <ol class="timeline">${steps.map((s, i) => {
             const at = o.events.find(e => s[2].includes(e.status))?.at;
@@ -81,7 +94,7 @@ export async function load({ number }, query) {
           </dl>
           <h3 class="sub-head">Shipping to</h3>
           <address>${esc(a.full_name)}<br>${esc(a.line1)}${a.line2 ? '<br>' + esc(a.line2) : ''}<br>${esc(a.city)}, ${esc(a.province)} ${esc(a.postal_code)}</address>
-          ${o.shipping_rate ? `<p class="muted small">Estimated ${o.shipping_rate.min_days}–${o.shipping_rate.max_days} business days after it ships. Tracking appears here once it's on its way.</p>` : ''}
+          ${o.shipping_rate ? `<p class="muted small">Estimated ${o.shipping_rate.min_days}–${o.shipping_rate.max_days} business days after it ships. ${(o.shipments || []).length ? '' : "Tracking appears here once it's on its way."}</p>` : ''}
           ${o.payment_provider === 'mock' ? '<p class="test-flag small">Paid with the development test provider — no real charge.</p>' : ''}
         </aside>
       </div>

@@ -18,7 +18,9 @@ const NAV = [
   { group: 'Custom designs', perm: 'moderation.review', items: [
     ['Moderation', '/admin/designs'], ['Approved', '/admin/designs?status=approved'], ['Rejected', '/admin/designs?status=rejected'],
     ['All designs', '/admin/designs?status=all'], ['Custom pricing', '/admin/pricing', 'pricing.write']] },
-  { group: 'Fulfillment', perm: 'fulfillment.read', items: [['Partners & production', '/admin/fulfillment']] },
+  { group: 'Fulfillment', perm: 'fulfil', items: [
+    ['Overview & alerts', '/admin/fulfillment'], ['Production queue', '/admin/fulfillment/production'], ['Partners', '/admin/fulfillment/partners'],
+    ['Partner inventory', '/admin/fulfillment/stock'], ['Shipments', '/admin/fulfillment/shipments']] },
   { group: 'Customers', perm: 'customers.read', items: [['Customers', '/admin/customers']] },
   { group: 'Marketing', perm: 'marketing.write', items: [['Discounts', '/admin/discounts'], ['Promotions', '/admin/promotions']] },
   { group: 'Settings', perm: 'staff', items: [
@@ -41,7 +43,7 @@ const MODULES = {
   audit: () => import('./audit.js'),
   categories: () => import('./crud.js'), collections: () => import('./crud.js'), designers: () => import('./crud.js'),
   discounts: () => import('./crud.js'), themes: () => import('./crud.js'), shipping: () => import('./crud.js'), taxes: () => import('./crud.js'), store: () => import('./crud.js'),
-  fulfillment: () => import('./later.js'), promotions: () => import('./later.js'),
+  fulfillment: () => import('./fulfillment.js'), promotions: () => import('./later.js'),
 };
 
 let permsCache = null;
@@ -76,7 +78,13 @@ export async function load({ rest = '' }, query) {
       <p class="cc-muted">Store owner setting this up for the first time? Confirm your email address, then reload this page.</p>
       <p><a class="cc-btn" href="/">Back to the store</a></p></section>` };
   }
-  const can = (p) => perms.has('*') || p === 'staff' || perms.has(p);
+  if (perms.size === 1 && perms.has('partner.portal')) {
+    return { theme, title: 'Admin', html: `<section class="cc-gate"><h1>This is a partner account</h1>
+      <p>${esc(auth.user.email)} is linked to a production partner. Your work is in the partner portal.</p>
+      <p><a class="cc-btn cc-btn--primary" href="/partner">Open the partner portal</a></p></section>` };
+  }
+  const can = (p) => perms.has('*') || p === 'staff' || perms.has(p)
+    || (p === 'fulfil' && ['fulfillment.read', 'fulfillment.write', 'orders.read'].some(x => perms.has(x)));
   const segs = rest.split('/').filter(Boolean);
   const key = segs[0] || '';
   const loader = MODULES[key];

@@ -22,6 +22,7 @@
 | `CRON_SECRET` | no | protects manually-triggered job endpoints |
 | `PAYMENT_PROVIDER` | no | `mock` (default, test page) or `stripe` |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | no | needed when `PAYMENT_PROVIDER=stripe` (see docs/checkout.md) |
+| `CARRIER_WEBHOOK_SECRET` | no | bearer secret for `/api/carrier-webhook` (tracking scans from a carrier or tracking aggregator) |
 | `AI_PROVIDER`, `MODERATION_PROVIDER`, `SHIPPING_PROVIDER`, `EMAIL_PROVIDER` | no | `mock` until real adapters are configured. Design moderation uses the built-in checks; with `INTEGRATIONS_MODE=live` images are sent to human review rather than auto-approved |
 
 `scripts/write-env.mjs` writes only the public values into

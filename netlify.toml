@@ -10,6 +10,10 @@
 [functions."scheduled-lifecycle"]
   schedule = "*/10 * * * *"
 
+# Fulfillment: missed routing, backorders, overdue/late alerts, partner webhooks, test carrier
+[functions."scheduled-fulfillment"]
+  schedule = "*/5 * * * *"
+
 [[headers]]
   for = "/*"
   [headers.values]
@@ -20,6 +24,11 @@
 
 [[headers]]
   for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/partner/*"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
 

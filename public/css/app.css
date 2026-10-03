@@ -561,6 +561,12 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 400; line-height: 1;
 .order-head .h-section { margin: 0; }
 .status-pill { padding: 6px 14px; border: 2px solid var(--accent); color: var(--fg); background: var(--bg); font-weight: 800; font-size: 14px; font-style: normal; }
 .status-pill.is-stopped { border-color: var(--muted); color: var(--muted); }
+.track-card { border: 2px solid var(--accent); padding: 14px 16px; margin: 0 0 20px; display: grid; gap: 8px; }
+.track-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.track-head > div { display: grid; gap: 2px; }
+.track-status { font-size: 20px; font-weight: 800; font-style: normal; }
+.track-scans { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
+.track-scans li { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 14px; }
 .sub-head { font-family: var(--font-body); font-size: 15px; font-weight: 800; margin: 26px 0 12px; font-style: normal; }
 .sub-head:first-child { margin-top: 0; }
 .timeline { list-style: none; margin: 0; padding: 0; display: grid; }

@@ -1,6 +1,7 @@
 // Orders: search / filter list, and the full order view with actions.
 import { db, auth, storage } from '../lib/supabase.js';
 import { esc, money, num, pill, table, date, dateTime, label, toast, confirmDialog, bindRowLinks, errorText } from './ui.js';
+import { orderPanel } from './fulfillment.js';
 
 const GROUPS = [['', 'All'], ['pending', 'Pending'], ['production', 'Production'], ['shipped', 'Shipped'], ['delivered', 'Delivered'],
   ['backorders', 'Backorders'], ['returns', 'Returns'], ['refunds', 'Refunds'], ['cancelled', 'Cancelled'], ['unpaid', 'Unpaid / abandoned']];
@@ -49,6 +50,7 @@ async function detail(ctx, id) {
   const shipped = ['shipped', 'in_transit', 'out_for_delivery', 'delivered', 'returned'].includes(o.status);
   const refundable = o.paid_at ? o.total_cents - d.refunded_cents : 0;
   const can = d.can;
+  const ff = ctx.can('fulfil') ? await orderPanel(o, ctx).catch((e) => ({ html: `<section class="cc-card"><h2>Fulfillment</h2><p class="cc-muted">${esc(errorText(e))}</p></section>` })) : null;
 
   const actions = [
     can.write ? '<button class="cc-btn" data-act="note">Add note</button>' : '',
@@ -93,7 +95,8 @@ async function detail(ctx, id) {
           <section class="cc-card"><h2>Shipping</h2>
             <address>${esc(a.full_name)}<br>${esc(a.line1)}${a.line2 ? '<br>' + esc(a.line2) : ''}<br>${esc(a.city)}, ${esc(a.province)} ${esc(a.postal_code)}</address>
             <p class="cc-muted">${esc(o.shipping_rate?.label || '')}${o.shipping_rate ? ` · ${o.shipping_rate.min_days}–${o.shipping_rate.max_days} business days` : ''}</p>
-            <p class="cc-muted cc-small">Carrier, tracking and the production partner appear here once fulfillment partners are connected (Phase 7).</p></section>
+          </section>
+          ${ff ? ff.html : ''}
           <section class="cc-card"><h2>Payments</h2>${table(d.payments, [
             { label: 'Type', render: p => label(p.kind) }, { key: 'provider', label: 'Provider' },
             { label: 'Amount', align: 'right', render: p => (p.kind === 'refund' ? '−' : '') + money(p.amount_cents) }, { label: 'When', render: p => dateTime(p.at) },
@@ -101,6 +104,7 @@ async function detail(ctx, id) {
         </div>
       </div>`,
     mount(root) {
+      ff?.mount?.(root);
       const reload = () => ctx.go(location.pathname);
       const call = async (fn, args, ok) => {
         try { const r = await db.rpc(fn, args); toast(ok(r)); reload(); }

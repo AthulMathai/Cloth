@@ -12,12 +12,13 @@ print-on-demand clothing brand. Hosted on **Netlify**, backed by **Supabase**.
 | 2 | Cart, checkout, payments (mock + Stripe adapter), taxes, shipping, discounts | **Built** — see docs/checkout.md |
 | 3 | Custom designer + dynamic pricing engine, saved designs, quote requests | **Built** — see docs/custom-designer.md (pricing rules + calculator in admin) |
 | 3 | Real-time 3D garments, drag-on-garment, 3D mockups, live camera try-on | **Built** — three.js r180 vendored in `public/vendor/three` |
-| 4 | Orders, order history, customer tracking | **Built** except shipping/tracking numbers (Phase 7) and order emails (needs an email provider) |
+| 4 | Orders, order history, customer tracking | **Built** (carrier tracking on the order page since Phase 7). Order emails need an email provider |
 | — | Admin control center (`/admin`): dashboard, orders (hold/cancel/refund/notes), products, variants, inventory, drops, categories/collections/themes, discounts, custom pricing + calculator, quotes, moderation queue, customers, shipping, taxes, users & roles, audit log | **Built** — see docs/admin.md |
 | — | Sign-in required to shop (bag + checkout) | **Built** |
 | 5 | Limited drops, numbering, sold-out → archive | **Built**, including purchase with reservation-safe numbering |
 | 6 | Moderation | **Built**: automated checks + human review queue in admin. Provider OCR / image classification are plug-in slots |
-| 7–10 | Fulfillment & partner portal, CRM, analytics dashboards, AI | Planned |
+| 7 | Fulfillment: partners, automatic routing, production orders, partner portal (`/partner`), partner blank stock, shipments + tracking, alerts, partner webhooks | **Built** — see docs/fulfillment.md. Five fictional test partners are seeded |
+| 8–10 | CRM, analytics dashboards, AI | Planned |
 
 ## Run it locally
 
