@@ -14,22 +14,22 @@ export async function view(ctx) {
   const supers = d.staff.filter(s => s.role === 'super_admin').length;
   return {
     title: 'Users & roles',
-    html: `<header class="ad-head"><div><h1>Users & roles</h1><p class="ad-muted">${d.staff.length} role assignments</p></div></header>
-      <section class="ad-card"><h2>Add staff</h2>
-        <form class="ad-inline ad-inline--wide" data-grant><input name="email" type="email" placeholder="their account email" required aria-label="Email">
+    html: `<header class="cc-head"><div><h1>Users & roles</h1><p class="cc-muted">${d.staff.length} role assignments</p></div></header>
+      <section class="cc-card"><h2>Add staff</h2>
+        <form class="cc-inline cc-inline--wide" data-grant><input name="email" type="email" placeholder="their account email" required aria-label="Email">
           <select name="role" aria-label="Role">${d.roles.filter(r => r !== 'partner_admin').map(r => `<option value="${r}"${r === 'admin' ? ' selected' : ''}>${esc(label(r))}</option>`).join('')}</select>
-          <button class="ad-btn ad-btn--primary">Add role</button></form>
-        <p class="ad-muted ad-small">They need a store account first (they can sign up at /account/sign-up). Each person only gets the permissions their job needs.</p></section>
-      <section class="ad-card ad-card--flush">${table(d.staff, [
-        { label: 'Person', render: s => `<strong>${esc(s.name || s.email)}</strong><br><span class="ad-muted ad-small">${esc(s.email)}</span>` },
-        { label: 'Role', render: s => `<span class="ad-tag">${esc(label(s.role))}</span>` },
-        { label: 'Can', render: s => `<span class="ad-small">${esc(ROLE_HELP[s.role] || '')}</span>` },
+          <button class="cc-btn cc-btn--primary">Add role</button></form>
+        <p class="cc-muted cc-small">They need a store account first (they can sign up at /account/sign-up). Each person only gets the permissions their job needs.</p></section>
+      <section class="cc-card cc-card--flush">${table(d.staff, [
+        { label: 'Person', render: s => `<strong>${esc(s.name || s.email)}</strong><br><span class="cc-muted cc-small">${esc(s.email)}</span>` },
+        { label: 'Role', render: s => `<span class="cc-tag">${esc(label(s.role))}</span>` },
+        { label: 'Can', render: s => `<span class="cc-small">${esc(ROLE_HELP[s.role] || '')}</span>` },
         { label: 'Since', render: s => date(s.granted_at) },
-        { label: '', render: s => (s.role === 'super_admin' && supers <= 1) ? '<span class="ad-muted ad-small">last super admin</span>'
-            : `<button class="ad-btn ad-btn--small ad-btn--danger" data-revoke="${s.id}" data-who="${esc(s.email)}" data-role="${esc(s.role)}">Remove</button>` }])}</section>
-      <section class="ad-card"><h2>What each role can do</h2>${table(Object.entries(d.permissions).map(([role, perms]) => ({ role, perms })), [
-        { label: 'Role', render: r => esc(label(r.role)) }, { label: 'Permissions', render: r => r.perms.map(p => `<code class="ad-small">${esc(p)}</code>`).join(' ') }])}
-        <p class="ad-muted ad-small">Super admins have every permission. Permissions are data in the database, so roles can be tuned without code changes.</p></section>`,
+        { label: '', render: s => (s.role === 'super_admin' && supers <= 1) ? '<span class="cc-muted cc-small">last super admin</span>'
+            : `<button class="cc-btn cc-btn--small cc-btn--danger" data-revoke="${s.id}" data-who="${esc(s.email)}" data-role="${esc(s.role)}">Remove</button>` }])}</section>
+      <section class="cc-card"><h2>What each role can do</h2>${table(Object.entries(d.permissions).map(([role, perms]) => ({ role, perms })), [
+        { label: 'Role', render: r => esc(label(r.role)) }, { label: 'Permissions', render: r => r.perms.map(p => `<code class="cc-small">${esc(p)}</code>`).join(' ') }])}
+        <p class="cc-muted cc-small">Super admins have every permission. Permissions are data in the database, so roles can be tuned without code changes.</p></section>`,
     mount(root) {
       root.querySelector('[data-grant]').onsubmit = async (e) => {
         e.preventDefault();

@@ -14,13 +14,13 @@ export async function view(ctx) {
   const prod = (id) => products.find(p => p.id === id);
   return {
     title: 'Limited drops',
-    html: `<header class="ad-head"><div><h1>Limited drops</h1><p class="ad-muted">${drops.length} drops</p></div>
-        ${canWrite ? '<a class="ad-btn ad-btn--primary" href="/admin/drops/new">New drop</a>' : ''}</header>
-      <p class="ad-note">Edition numbers are assigned when payment is confirmed, never twice. When the last piece sells the product becomes sold out, then moves to the archive automatically.</p>
-      <section class="ad-card ad-card--flush">${table(drops, [
-        { label: 'Drop', render: d => `<strong>${String(d.drop_number).padStart(3, '0')} · ${esc(d.drop_name)}</strong><br><span class="ad-muted ad-small">${esc(prod(d.product_id)?.name || '')}</span>` },
-        { label: 'Sold', render: d => `<div class="ad-meter" role="img" aria-label="${d.units_sold} of ${d.edition_size} sold"><span style="width:${Math.min(100, d.units_sold / d.edition_size * 100)}%"></span></div>
-            <span class="ad-small">${num(d.units_sold)} / ${num(d.edition_size)}${d.units_reserved ? ` · ${d.units_reserved} in checkout` : ''}</span>` },
+    html: `<header class="cc-head"><div><h1>Limited drops</h1><p class="cc-muted">${drops.length} drops</p></div>
+        ${canWrite ? '<a class="cc-btn cc-btn--primary" href="/admin/drops/new">New drop</a>' : ''}</header>
+      <p class="cc-note">Edition numbers are assigned when payment is confirmed, never twice. When the last piece sells the product becomes sold out, then moves to the archive automatically.</p>
+      <section class="cc-card cc-card--flush">${table(drops, [
+        { label: 'Drop', render: d => `<strong>${String(d.drop_number).padStart(3, '0')} · ${esc(d.drop_name)}</strong><br><span class="cc-muted cc-small">${esc(prod(d.product_id)?.name || '')}</span>` },
+        { label: 'Sold', render: d => `<div class="cc-meter" role="img" aria-label="${d.units_sold} of ${d.edition_size} sold"><span style="width:${Math.min(100, d.units_sold / d.edition_size * 100)}%"></span></div>
+            <span class="cc-small">${num(d.units_sold)} / ${num(d.edition_size)}${d.units_reserved ? ` · ${d.units_reserved} in checkout` : ''}</span>` },
         { label: 'Release', render: d => dateTime(d.release_at) },
         { label: 'Price', align: 'right', render: d => d.original_price_cents ? money(d.original_price_cents) : '—' },
         { label: 'Status', render: d => d.archived_at ? pill('archived') : d.sold_out_at ? pill('sold_out') : pill(prod(d.product_id)?.status || 'draft') }],
@@ -36,7 +36,7 @@ async function edit(ctx, id, canWrite) {
     isNew ? null : db.from('limited_drops').select('*').eq('id', id).single().catch(() => null),
     db.from('limited_drops').select('drop_number').order('drop_number', { ascending: false }).limit(1),
   ]);
-  if (!isNew && !d) return { title: 'Not found', html: '<p class="ad-empty">Drop not found.</p>' };
+  if (!isNew && !d) return { title: 'Not found', html: '<p class="cc-empty">Drop not found.</p>' };
   const taken = new Set((await db.from('limited_drops').select('product_id')).map(r => r.product_id));
   const fields = [
     { name: 'product_id', label: 'Product', type: 'select', required: true, help: 'The product sold in this drop (one drop per product).',
@@ -55,15 +55,15 @@ async function edit(ctx, id, canWrite) {
     : { ...d, archive_hours: hours(d.archive_delay) };
   return {
     title: isNew ? 'New drop' : d.drop_name,
-    html: `<p class="ad-crumbs"><a href="/admin/drops">Limited drops</a> / ${isNew ? 'New' : esc(d.drop_name)}</p>
-      <header class="ad-head"><h1>${isNew ? 'New drop' : `${String(d.drop_number).padStart(3, '0')} · ${esc(d.drop_name)}`}</h1>
-        ${!isNew ? `<div class="ad-actions"><a class="ad-btn" href="/admin/products/${d.product_id}">Product</a>${d.archived_at ? `<a class="ad-btn" href="/archive/${esc(d.slug)}" target="_blank" rel="noopener">Archive page ↗</a>` : ''}</div>` : ''}</header>
-      ${!isNew ? `<div class="ad-kpis ad-kpis--small"><div class="ad-kpi"><span class="ad-kpi-label">Sold</span><strong>${num(d.units_sold)} / ${num(d.edition_size)}</strong></div>
-        <div class="ad-kpi"><span class="ad-kpi-label">In checkout</span><strong>${num(d.units_reserved)}</strong></div>
-        <div class="ad-kpi"><span class="ad-kpi-label">Sold out</span><strong>${d.sold_out_at ? dateTime(d.sold_out_at) : '—'}</strong></div>
-        <div class="ad-kpi"><span class="ad-kpi-label">Archived</span><strong>${d.archived_at ? dateTime(d.archived_at) : '—'}</strong></div></div>` : ''}
-      <p class="ad-note">To schedule the release, set the product's status to Scheduled with the same publish time. The edition size can't be set below pieces already sold or held.</p>
-      <section class="ad-card">${canWrite ? form(fields, values, { submit: isNew ? 'Create drop' : 'Save drop' }) : '<p class="ad-empty">View only.</p>'}</section>`,
+    html: `<p class="cc-crumbs"><a href="/admin/drops">Limited drops</a> / ${isNew ? 'New' : esc(d.drop_name)}</p>
+      <header class="cc-head"><h1>${isNew ? 'New drop' : `${String(d.drop_number).padStart(3, '0')} · ${esc(d.drop_name)}`}</h1>
+        ${!isNew ? `<div class="cc-actions"><a class="cc-btn" href="/admin/products/${d.product_id}">Product</a>${d.archived_at ? `<a class="cc-btn" href="/archive/${esc(d.slug)}" target="_blank" rel="noopener">Archive page ↗</a>` : ''}</div>` : ''}</header>
+      ${!isNew ? `<div class="cc-kpis cc-kpis--small"><div class="cc-kpi"><span class="cc-kpi-label">Sold</span><strong>${num(d.units_sold)} / ${num(d.edition_size)}</strong></div>
+        <div class="cc-kpi"><span class="cc-kpi-label">In checkout</span><strong>${num(d.units_reserved)}</strong></div>
+        <div class="cc-kpi"><span class="cc-kpi-label">Sold out</span><strong>${d.sold_out_at ? dateTime(d.sold_out_at) : '—'}</strong></div>
+        <div class="cc-kpi"><span class="cc-kpi-label">Archived</span><strong>${d.archived_at ? dateTime(d.archived_at) : '—'}</strong></div></div>` : ''}
+      <p class="cc-note">To schedule the release, set the product's status to Scheduled with the same publish time. The edition size can't be set below pieces already sold or held.</p>
+      <section class="cc-card">${canWrite ? form(fields, values, { submit: isNew ? 'Create drop' : 'Save drop' }) : '<p class="cc-empty">View only.</p>'}</section>`,
     mount(root) {
       const f = root.querySelector('[data-form]'); if (!f) return;
       f.onsubmit = async (e) => {

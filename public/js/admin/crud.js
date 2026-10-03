@@ -50,7 +50,7 @@ const CONFIG = {
   categories: {
     title: 'Categories', one: 'category', perm: 'catalog.write', order: 'sort_order',
     lookups: async () => ({ themes: await db.from('themes').select('id,name').order('name') }),
-    columns: (L) => [{ key: 'name', label: 'Name', render: r => `<strong>${esc(r.name)}</strong><br><span class="ad-muted ad-small">/category/${esc(r.slug)}</span>` },
+    columns: (L) => [{ key: 'name', label: 'Name', render: r => `<strong>${esc(r.name)}</strong><br><span class="cc-muted cc-small">/category/${esc(r.slug)}</span>` },
       { label: 'Theme', render: r => esc(L.themes.find(t => t.id === r.theme_id)?.name || 'Default') }, { key: 'sort_order', label: 'Order', align: 'right' },
       { label: 'Visible', render: r => r.is_visible ? pill('active', 'Visible') : pill('draft', 'Hidden') }],
     fields: (L) => [{ name: 'name', label: 'Name', required: true }, { name: 'slug', label: 'URL slug', help: 'Generated from the name if empty.' },
@@ -63,11 +63,11 @@ const CONFIG = {
     title: 'Collections', one: 'collection', perm: 'catalog.write', order: 'sort_order',
     lookups: async () => ({ themes: await db.from('themes').select('id,name').order('name'),
       categories: await db.from('categories').select('id,name').order('sort_order'), designers: await db.from('designers').select('id,name').order('name') }),
-    columns: (L) => [{ label: 'Name', render: r => `<strong>${esc(r.name)}</strong><br><span class="ad-muted ad-small">/collections/${esc(r.slug)}</span>` },
+    columns: (L) => [{ label: 'Name', render: r => `<strong>${esc(r.name)}</strong><br><span class="cc-muted cc-small">/collections/${esc(r.slug)}</span>` },
       { label: 'Category', render: r => esc(L.categories.find(c => c.id === r.category_id)?.name || '—') },
       { label: 'Designer', render: r => esc(L.designers.find(c => c.id === r.designer_id)?.name || '—') },
       { label: 'Theme', render: r => esc(L.themes.find(t => t.id === r.theme_id)?.name || 'Default') },
-      { label: 'Status', render: r => (r.is_visible ? pill('active', 'Visible') : pill('draft', 'Hidden')) + (r.is_featured ? ' <span class="ad-tag">Featured</span>' : '') }],
+      { label: 'Status', render: r => (r.is_visible ? pill('active', 'Visible') : pill('draft', 'Hidden')) + (r.is_featured ? ' <span class="cc-tag">Featured</span>' : '') }],
     fields: (L) => [{ name: 'name', label: 'Name', required: true }, { name: 'slug', label: 'URL slug' },
       { name: 'category_id', label: 'Category', type: 'select', options: [['', '—'], ...L.categories.map(c => [c.id, c.name])] },
       { name: 'designer_id', label: 'Designer / artist', type: 'select', options: [['', '—'], ...L.designers.map(c => [c.id, c.name])] },
@@ -80,7 +80,7 @@ const CONFIG = {
   },
   designers: {
     title: 'Designers & artists', one: 'designer', perm: 'catalog.write', order: 'name',
-    columns: () => [{ label: 'Name', render: r => `<strong>${esc(r.name)}</strong>${r.is_house ? ' <span class="ad-tag">House</span>' : ''}` },
+    columns: () => [{ label: 'Name', render: r => `<strong>${esc(r.name)}</strong>${r.is_house ? ' <span class="cc-tag">House</span>' : ''}` },
       { key: 'website', label: 'Website' }, { label: 'Visible', render: r => r.is_visible ? pill('active', 'Visible') : pill('draft', 'Hidden') }],
     fields: () => [{ name: 'name', label: 'Name', required: true }, { name: 'slug', label: 'URL slug' },
       { name: 'avatar_url', label: 'Profile image URL' }, { name: 'website', label: 'Website' },
@@ -93,7 +93,7 @@ const CONFIG = {
     title: 'Discount codes', one: 'discount code', perm: 'marketing.write', order: 'created_at', desc: true,
     lookups: async () => ({ categories: await db.from('categories').select('id,name').order('sort_order'),
       collections: await db.from('collections').select('id,name').order('name'), products: await db.from('products').select('id,name').order('name') }),
-    columns: () => [{ label: 'Code', render: r => `<strong class="ad-mono">${esc(r.code)}</strong><br><span class="ad-muted ad-small">${esc(r.description || '')}</span>` },
+    columns: () => [{ label: 'Code', render: r => `<strong class="cc-mono">${esc(r.code)}</strong><br><span class="cc-muted cc-small">${esc(r.description || '')}</span>` },
       { label: 'Discount', render: r => r.kind === 'percent' ? `${+r.value}% off` : r.kind === 'fixed' ? `${money(r.value)} off` : r.kind === 'free_shipping' ? 'Free shipping' : `Buy ${r.buy_qty} get ${r.get_qty}` },
       { label: 'Applies to', render: r => r.scope === 'all' ? 'Everything' : `${label(r.scope)} (${(r.scope_ids || []).length})` },
       { label: 'Used', align: 'right', render: r => `${r.uses_count}${r.max_uses ? ` / ${r.max_uses}` : ''}` },
@@ -135,8 +135,8 @@ const CONFIG = {
   shipping: {
     title: 'Shipping rates', one: 'shipping rate', perm: 'settings.write', table: 'shipping_rates', order: 'sort_order',
     lookups: async () => ({ zones: await db.from('shipping_zones').select('id,name,provinces').order('name') }),
-    columns: (L) => [{ label: 'Rate', render: r => `<strong>${esc(r.label)}</strong> <span class="ad-muted ad-small">${esc(r.code)}</span>` },
-      { label: 'Zone', render: r => { const z = L.zones.find(z => z.id === r.zone_id); return z ? `${esc(z.name)}<br><span class="ad-muted ad-small">${esc(z.provinces.join(', '))}</span>` : '—'; } },
+    columns: (L) => [{ label: 'Rate', render: r => `<strong>${esc(r.label)}</strong> <span class="cc-muted cc-small">${esc(r.code)}</span>` },
+      { label: 'Zone', render: r => { const z = L.zones.find(z => z.id === r.zone_id); return z ? `${esc(z.name)}<br><span class="cc-muted cc-small">${esc(z.provinces.join(', '))}</span>` : '—'; } },
       { label: 'Price', align: 'right', render: r => money(r.price_cents) }, { label: 'Free over', align: 'right', render: r => r.free_over_cents ? money(r.free_over_cents) : '—' },
       { label: 'Days', render: r => `${r.min_days}–${r.max_days}` }, { label: 'Carrier', render: r => esc(r.carrier || '—') },
       { label: 'Status', render: r => r.is_active ? pill('active', 'On') : pill('draft', 'Off') }],
@@ -164,8 +164,8 @@ const CONFIG = {
   },
   store: {
     title: 'Store settings', one: 'setting', perm: 'settings.write', table: 'store_settings', idKey: 'key', order: 'key',
-    columns: () => [{ label: 'Setting', render: r => `<strong class="ad-mono">${esc(r.key)}</strong>` },
-      { label: 'Value', render: r => `<code class="ad-small">${esc(JSON.stringify(r.value).slice(0, 120))}</code>` },
+    columns: () => [{ label: 'Setting', render: r => `<strong class="cc-mono">${esc(r.key)}</strong>` },
+      { label: 'Value', render: r => `<code class="cc-small">${esc(JSON.stringify(r.value).slice(0, 120))}</code>` },
       { label: 'Public', render: r => r.is_public ? 'Yes' : 'Staff only' }],
     fields: () => [{ name: 'key', label: 'Key', required: true, help: 'e.g. store.tagline' }, { name: 'value', label: 'Value (JSON)', type: 'json', full: true, rows: 6 },
       { name: 'is_public', label: 'Readable by the storefront', type: 'checkbox' }],
@@ -174,7 +174,7 @@ const CONFIG = {
   themes: {
     title: 'Themes', one: 'theme', perm: 'catalog.write', table: 'themes', order: 'name',
     columns: () => [{ key: 'name', label: 'Theme' }, { key: 'slug', label: 'Slug' },
-      { label: 'Look', render: r => { const c = r.config?.colors || {}; return ['bg', 'fg', 'accent', 'surface'].map(k => c[k] ? `<span class="ad-swatch" style="background:${esc(c[k])}" title="${k} ${esc(c[k])}"></span>` : '').join(''); } },
+      { label: 'Look', render: r => { const c = r.config?.colors || {}; return ['bg', 'fg', 'accent', 'surface'].map(k => c[k] ? `<span class="cc-swatch" style="background:${esc(c[k])}" title="${k} ${esc(c[k])}"></span>` : '').join(''); } },
       { label: 'Background', render: r => esc(label(r.config?.background?.effect || 'none')) }],
     fields: () => [{ name: 'name', label: 'Name', required: true }, { name: 'slug', label: 'Slug' },
       { name: 'config', label: 'Theme config (JSON): colors, fonts, background, hero, intro, cards, buttons, motion', type: 'json', full: true, rows: 18 }],
@@ -193,15 +193,15 @@ export async function view(ctx) {
     const isNew = editing === 'new';
     const row = isNew ? { ...(cfg.defaults || {}) }
       : await db.from(tableName).select('*').eq(idKey, decodeURIComponent(editing)).single().catch(() => null);
-    if (!row) return { title: cfg.title, html: '<p class="ad-empty">Not found.</p>' };
+    if (!row) return { title: cfg.title, html: '<p class="cc-empty">Not found.</p>' };
     const fields = cfg.fields(L);
     const values = cfg.load ? cfg.load(row) : row;
     return {
       title: isNew ? `New ${cfg.one}` : `Edit ${cfg.one}`,
-      html: `<p class="ad-crumbs"><a href="/admin/${key}">${esc(cfg.title)}</a> / ${isNew ? 'New' : esc(row.name || row.code || row.label || row.key || '')}</p>
-        <header class="ad-head"><h1>${isNew ? `New ${esc(cfg.one)}` : esc(row.name || row.code || row.label || row.key)}</h1></header>
-        ${cfg.note ? `<p class="ad-note">${esc(cfg.note)}</p>` : ''}
-        <section class="ad-card">${canWrite ? formWithMulti(fields, values) : '<p class="ad-empty">You can view but not edit this.</p>'}</section>`,
+      html: `<p class="cc-crumbs"><a href="/admin/${key}">${esc(cfg.title)}</a> / ${isNew ? 'New' : esc(row.name || row.code || row.label || row.key || '')}</p>
+        <header class="cc-head"><h1>${isNew ? `New ${esc(cfg.one)}` : esc(row.name || row.code || row.label || row.key)}</h1></header>
+        ${cfg.note ? `<p class="cc-note">${esc(cfg.note)}</p>` : ''}
+        <section class="cc-card">${canWrite ? formWithMulti(fields, values) : '<p class="cc-empty">You can view but not edit this.</p>'}</section>`,
       mount(root) {
         bindColorMirrors(root);
         bindMulti(root);
@@ -227,10 +227,10 @@ export async function view(ctx) {
   const rows = await q;
   return {
     title: cfg.title,
-    html: `<header class="ad-head"><div><h1>${esc(cfg.title)}</h1><p class="ad-muted">${rows.length} total</p></div>
-        ${canWrite ? `<a class="ad-btn ad-btn--primary" href="/admin/${key}/new">New ${esc(cfg.one)}</a>` : ''}</header>
-      ${cfg.note ? `<p class="ad-note">${esc(cfg.note)}</p>` : ''}
-      <section class="ad-card ad-card--flush">${table(rows, cfg.columns(L), { rowHref: r => `/admin/${key}/${encodeURIComponent(r[idKey])}` })}</section>`,
+    html: `<header class="cc-head"><div><h1>${esc(cfg.title)}</h1><p class="cc-muted">${rows.length} total</p></div>
+        ${canWrite ? `<a class="cc-btn cc-btn--primary" href="/admin/${key}/new">New ${esc(cfg.one)}</a>` : ''}</header>
+      ${cfg.note ? `<p class="cc-note">${esc(cfg.note)}</p>` : ''}
+      <section class="cc-card cc-card--flush">${table(rows, cfg.columns(L), { rowHref: r => `/admin/${key}/${encodeURIComponent(r[idKey])}` })}</section>`,
     mount(root) { bindRowLinks(root, ctx.go); },
   };
 }
@@ -241,10 +241,10 @@ function formWithMulti(fields, values) {
   if (!multi.length) return form(fields, values);
   let html = form(fields.filter(f => f.type !== 'multi'), values);
   const m = multi[0], picked = new Set(values[m.name] || []);
-  const box = `<div class="ad-field is-full"><span>${esc(m.label)}</span><div class="ad-multi" data-multi="${m.name}">${Object.entries(m.groups).map(([g, items]) =>
-    `<div data-group="${g}" ${values.scope === g ? '' : 'hidden'}>${items.map(i => `<label class="ad-check"><input type="checkbox" value="${i.id}"${picked.has(i.id) ? ' checked' : ''}> ${esc(i.name)}</label>`).join('') || '<p class="ad-muted">None yet.</p>'}</div>`).join('')}
+  const box = `<div class="cc-field is-full"><span>${esc(m.label)}</span><div class="cc-multi" data-multi="${m.name}">${Object.entries(m.groups).map(([g, items]) =>
+    `<div data-group="${g}" ${values.scope === g ? '' : 'hidden'}>${items.map(i => `<label class="cc-check"><input type="checkbox" value="${i.id}"${picked.has(i.id) ? ' checked' : ''}> ${esc(i.name)}</label>`).join('') || '<p class="cc-muted">None yet.</p>'}</div>`).join('')}
     </div><small>${esc(m.help || '')}</small></div>`;
-  return html.replace('</div>\n    <div class="ad-form-actions">', box + '</div>\n    <div class="ad-form-actions">');
+  return html.replace('</div>\n    <div class="cc-form-actions">', box + '</div>\n    <div class="cc-form-actions">');
 }
 function bindMulti(root) {
   const f = root.querySelector('[data-form]'), sc = f?.elements.scope;

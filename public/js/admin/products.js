@@ -13,17 +13,17 @@ export async function view(ctx) {
   const tab = (s, l) => `<a href="/admin/products?${new URLSearchParams({ ...(q ? { q } : {}), ...(s ? { status: s } : {}) })}"${s === status ? ' aria-current="true"' : ''}>${l}</a>`;
   return {
     title: status === 'archived' ? 'Archive' : 'Products',
-    html: `<header class="ad-head"><div><h1>${status === 'archived' ? 'Archive' : 'Products'}</h1><p class="ad-muted">${rows.length} products</p></div>
-        <div class="ad-actions"><form class="ad-search" data-search role="search"><input name="q" value="${esc(q)}" placeholder="Name, slug or SKU" aria-label="Search products"><button class="ad-btn">Search</button></form>
-        ${ctx.can('products.write') ? '<a class="ad-btn ad-btn--primary" href="/admin/products/new">New product</a>' : ''}</div></header>
-      <nav class="ad-tabs">${tab('', 'All')}${STATUSES.map(s => tab(s, label(s))).join('')}</nav>
-      ${status === 'archived' ? '<p class="ad-note">Archived products stay visible in the Limited Edition Archive but can never be bought. Sales history is kept.</p>' : ''}
-      <section class="ad-card ad-card--flush">${table(rows, [
-        { label: 'Product', render: p => `<strong>${esc(p.name)}</strong>${p.is_limited ? ' <span class="ad-tag">Limited</span>' : ''}${p.is_customizable ? ' <span class="ad-tag">Blank</span>' : ''}${p.is_featured ? ' <span class="ad-tag">Featured</span>' : ''}<br><span class="ad-muted ad-small">${esc(p.slug)}</span>` },
+    html: `<header class="cc-head"><div><h1>${status === 'archived' ? 'Archive' : 'Products'}</h1><p class="cc-muted">${rows.length} products</p></div>
+        <div class="cc-actions"><form class="cc-search" data-search role="search"><input name="q" value="${esc(q)}" placeholder="Name, slug or SKU" aria-label="Search products"><button class="cc-btn">Search</button></form>
+        ${ctx.can('products.write') ? '<a class="cc-btn cc-btn--primary" href="/admin/products/new">New product</a>' : ''}</div></header>
+      <nav class="cc-tabs">${tab('', 'All')}${STATUSES.map(s => tab(s, label(s))).join('')}</nav>
+      ${status === 'archived' ? '<p class="cc-note">Archived products stay visible in the Limited Edition Archive but can never be bought. Sales history is kept.</p>' : ''}
+      <section class="cc-card cc-card--flush">${table(rows, [
+        { label: 'Product', render: p => `<strong>${esc(p.name)}</strong>${p.is_limited ? ' <span class="cc-tag">Limited</span>' : ''}${p.is_customizable ? ' <span class="cc-tag">Blank</span>' : ''}${p.is_featured ? ' <span class="cc-tag">Featured</span>' : ''}<br><span class="cc-muted cc-small">${esc(p.slug)}</span>` },
         { label: 'Type', render: p => esc(label(p.product_type)) },
         { label: 'Collection', render: p => esc(p.collection || p.category || '—') },
-        { label: 'Price', align: 'right', render: p => p.sale_price_cents ? `<s class="ad-muted">${money(p.base_price_cents)}</s> ${money(p.sale_price_cents)}` : money(p.base_price_cents) },
-        { label: 'Stock', align: 'right', render: p => `${num(p.available)}${p.low ? ` <span class="ad-tag ad-tag--warn">${p.low} low</span>` : ''}` },
+        { label: 'Price', align: 'right', render: p => p.sale_price_cents ? `<s class="cc-muted">${money(p.base_price_cents)}</s> ${money(p.sale_price_cents)}` : money(p.base_price_cents) },
+        { label: 'Stock', align: 'right', render: p => `${num(p.available)}${p.low ? ` <span class="cc-tag cc-tag--warn">${p.low} low</span>` : ''}` },
         { label: 'Edition', render: p => p.drop_info ? `${p.drop_info.units_sold}/${p.drop_info.edition_size}` : '—' },
         { label: 'Status', render: p => pill(p.status) },
         { label: 'Updated', render: p => dateTime(p.updated_at) }], { empty: 'No products match.', rowHref: p => `/admin/products/${p.id}` })}</section>`,
@@ -45,7 +45,7 @@ async function edit(ctx, id) {
     isNew ? [] : db.from('product_media').select('*').eq('product_id', id).order('sort_order'),
     isNew ? null : db.from('limited_drops').select('*').eq('product_id', id).single().catch(() => null),
   ]);
-  if (!p) return { title: 'Not found', html: '<p class="ad-empty">Product not found.</p>' };
+  if (!p) return { title: 'Not found', html: '<p class="cc-empty">Product not found.</p>' };
   const canWrite = ctx.can('products.write'), canStock = ctx.can('inventory.write');
   const fields = [
     { name: 'name', label: 'Name', required: true }, { name: 'slug', label: 'URL slug', help: 'Generated from the name if empty.' },
@@ -73,33 +73,33 @@ async function edit(ctx, id) {
 
   return {
     title: isNew ? 'New product' : p.name,
-    html: `<p class="ad-crumbs"><a href="/admin/products">Products</a> / ${isNew ? 'New' : esc(p.name)}</p>
-      <header class="ad-head"><div><h1>${isNew ? 'New product' : esc(p.name)} ${isNew ? '' : pill(p.status)}</h1>
-        ${isNew ? '' : `<p class="ad-muted">Updated ${dateTime(p.updated_at)}${p.is_limited ? ' · limited edition' : ''}</p>`}</div>
-        ${isNew ? '' : `<div class="ad-actions"><a class="ad-btn" href="/product/${esc(p.slug)}" target="_blank" rel="noopener">View in store ↗</a>
-          ${canWrite ? `<button class="ad-btn" data-act="dup">Duplicate</button>${p.status !== 'archived' ? '<button class="ad-btn ad-btn--danger" data-act="archive">Archive</button>' : ''}` : ''}</div>`}</header>
-      ${drop ? `<div class="ad-alert ad-alert--info"><strong>Limited drop ${String(drop.drop_number).padStart(3, '0')}: ${esc(drop.drop_name)}</strong> — ${drop.units_sold}/${drop.edition_size} sold, ${drop.units_reserved} reserved.
+    html: `<p class="cc-crumbs"><a href="/admin/products">Products</a> / ${isNew ? 'New' : esc(p.name)}</p>
+      <header class="cc-head"><div><h1>${isNew ? 'New product' : esc(p.name)} ${isNew ? '' : pill(p.status)}</h1>
+        ${isNew ? '' : `<p class="cc-muted">Updated ${dateTime(p.updated_at)}${p.is_limited ? ' · limited edition' : ''}</p>`}</div>
+        ${isNew ? '' : `<div class="cc-actions"><a class="cc-btn" href="/product/${esc(p.slug)}" target="_blank" rel="noopener">View in store ↗</a>
+          ${canWrite ? `<button class="cc-btn" data-act="dup">Duplicate</button>${p.status !== 'archived' ? '<button class="cc-btn cc-btn--danger" data-act="archive">Archive</button>' : ''}` : ''}</div>`}</header>
+      ${drop ? `<div class="cc-alert cc-alert--info"><strong>Limited drop ${String(drop.drop_number).padStart(3, '0')}: ${esc(drop.drop_name)}</strong> — ${drop.units_sold}/${drop.edition_size} sold, ${drop.units_reserved} reserved.
         <a href="/admin/drops/${drop.id}">Edit drop</a></div>` : ''}
-      <section class="ad-card"><h2>Details</h2>${canWrite ? form(fields, values, { submit: isNew ? 'Create product' : 'Save product' }) : '<p class="ad-empty">You can view but not edit products.</p>'}</section>
-      ${isNew ? '<p class="ad-note">Save the product first, then add variants (sizes/colours), stock and images.</p>' : `
-      <section class="ad-card"><div class="ad-card-head"><h2>Variants & stock</h2>
-          ${canWrite ? '<button class="ad-btn ad-btn--small" data-act="grid">Add sizes × colours…</button>' : ''}</div>
+      <section class="cc-card"><h2>Details</h2>${canWrite ? form(fields, values, { submit: isNew ? 'Create product' : 'Save product' }) : '<p class="cc-empty">You can view but not edit products.</p>'}</section>
+      ${isNew ? '<p class="cc-note">Save the product first, then add variants (sizes/colours), stock and images.</p>' : `
+      <section class="cc-card"><div class="cc-card-head"><h2>Variants & stock</h2>
+          ${canWrite ? '<button class="cc-btn cc-btn--small" data-act="grid">Add sizes × colours…</button>' : ''}</div>
         ${table(variants, [
-          { label: 'Variant', render: v => `<span class="ad-swatch" style="background:${esc(v.color_hex || '#ccc')}"></span> ${esc(v.color || '')} / <strong>${esc(v.size || '')}</strong>` },
-          { label: 'SKU', render: v => `<span class="ad-mono ad-small">${esc(v.sku || '—')}</span>` },
-          { label: 'Price', align: 'right', render: v => v.price_cents == null ? '<span class="ad-muted">product price</span>' : money(v.price_cents) },
+          { label: 'Variant', render: v => `<span class="cc-swatch" style="background:${esc(v.color_hex || '#ccc')}"></span> ${esc(v.color || '')} / <strong>${esc(v.size || '')}</strong>` },
+          { label: 'SKU', render: v => `<span class="cc-mono cc-small">${esc(v.sku || '—')}</span>` },
+          { label: 'Price', align: 'right', render: v => v.price_cents == null ? '<span class="cc-muted">product price</span>' : money(v.price_cents) },
           { label: 'On hand', align: 'right', render: v => num(v.inventory_on_hand) },
           { label: 'Reserved', align: 'right', render: v => num(v.inventory_reserved) },
-          { label: 'Available', align: 'right', render: v => `${num(stockLeft(v))}${stockLeft(v) <= v.low_stock_threshold ? ' <span class="ad-tag ad-tag--warn">low</span>' : ''}` },
-          { label: '', render: v => `${v.is_active ? '' : pill('draft', 'Off') + ' '}${canStock ? `<button class="ad-btn ad-btn--small" data-stock="${v.id}">Adjust stock</button>` : ''}
-              ${canWrite ? `<button class="ad-btn ad-btn--small" data-variant="${v.id}">Edit</button>` : ''}` }],
+          { label: 'Available', align: 'right', render: v => `${num(stockLeft(v))}${stockLeft(v) <= v.low_stock_threshold ? ' <span class="cc-tag cc-tag--warn">low</span>' : ''}` },
+          { label: '', render: v => `${v.is_active ? '' : pill('draft', 'Off') + ' '}${canStock ? `<button class="cc-btn cc-btn--small" data-stock="${v.id}">Adjust stock</button>` : ''}
+              ${canWrite ? `<button class="cc-btn cc-btn--small" data-variant="${v.id}">Edit</button>` : ''}` }],
           { empty: 'No variants yet. Add sizes and colours so customers can buy it.' })}
-        <p class="ad-muted ad-small">Stock only changes through recorded adjustments (restock, damage, count correction), so every change has a reason in the inventory history.</p></section>
-      <section class="ad-card"><div class="ad-card-head"><h2>Images & video</h2>
-          ${canWrite ? `<label class="ad-btn ad-btn--small">Upload image<input type="file" accept="image/png,image/jpeg,image/webp" hidden data-upload></label>
-            <button class="ad-btn ad-btn--small" data-act="media-url">Add by URL</button>` : ''}</div>
-        <div class="ad-media">${media.map(m => `<figure>${m.kind === 'video' ? `<video src="${esc(m.url)}" muted></video>` : `<img src="${esc(m.url)}" alt="${esc(m.alt || '')}">`}
-          <figcaption>${esc(m.view || m.kind)}${m.is_historical ? ' · historical' : ''}${canWrite ? ` <button class="ad-link" data-rm-media="${m.id}">Remove</button>` : ''}</figcaption></figure>`).join('') || '<p class="ad-empty">No images yet — the store shows the drawn garment until there are photos.</p>'}</div></section>`}`,
+        <p class="cc-muted cc-small">Stock only changes through recorded adjustments (restock, damage, count correction), so every change has a reason in the inventory history.</p></section>
+      <section class="cc-card"><div class="cc-card-head"><h2>Images & video</h2>
+          ${canWrite ? `<label class="cc-btn cc-btn--small">Upload image<input type="file" accept="image/png,image/jpeg,image/webp" hidden data-upload></label>
+            <button class="cc-btn cc-btn--small" data-act="media-url">Add by URL</button>` : ''}</div>
+        <div class="cc-media">${media.map(m => `<figure>${m.kind === 'video' ? `<video src="${esc(m.url)}" muted></video>` : `<img src="${esc(m.url)}" alt="${esc(m.alt || '')}">`}
+          <figcaption>${esc(m.view || m.kind)}${m.is_historical ? ' · historical' : ''}${canWrite ? ` <button class="cc-link" data-rm-media="${m.id}">Remove</button>` : ''}</figcaption></figure>`).join('') || '<p class="cc-empty">No images yet — the store shows the drawn garment until there are photos.</p>'}</div></section>`}`,
     mount(root) {
       const f = root.querySelector('[data-form]');
       if (f) f.onsubmit = async (e) => {
@@ -171,15 +171,15 @@ async function edit(ctx, id) {
 
 async function stockDialog(v) {
   const d = document.createElement('dialog');
-  d.className = 'ad-dialog';
+  d.className = 'cc-dialog';
   d.innerHTML = `<form method="dialog"><h2>Adjust stock — ${esc(v.color)} / ${esc(v.size)}</h2>
-    <p class="ad-muted">On hand ${v.inventory_on_hand}, reserved ${v.inventory_reserved}.</p>
-    <label class="ad-field"><span>Change (+ to add, − to remove)</span><input name="delta" type="number" step="1" required></label>
-    <label class="ad-field"><span>Reason</span><select name="reason"><option value="restock">Restock (received)</option><option value="adjustment">Count correction</option>
+    <p class="cc-muted">On hand ${v.inventory_on_hand}, reserved ${v.inventory_reserved}.</p>
+    <label class="cc-field"><span>Change (+ to add, − to remove)</span><input name="delta" type="number" step="1" required></label>
+    <label class="cc-field"><span>Reason</span><select name="reason"><option value="restock">Restock (received)</option><option value="adjustment">Count correction</option>
       <option value="damage">Damaged / lost</option><option value="return">Customer return</option><option value="initial">Initial stock</option></select></label>
-    <label class="ad-field"><span>Note</span><input name="note" maxlength="200"></label>
-    <p class="ad-form-msg" data-msg></p>
-    <div class="ad-form-actions"><button class="ad-btn" type="button" data-cancel>Cancel</button><button class="ad-btn ad-btn--primary">Save</button></div></form>`;
+    <label class="cc-field"><span>Note</span><input name="note" maxlength="200"></label>
+    <p class="cc-form-msg" data-msg></p>
+    <div class="cc-form-actions"><button class="cc-btn" type="button" data-cancel>Cancel</button><button class="cc-btn cc-btn--primary">Save</button></div></form>`;
   document.body.append(d); d.showModal();
   return new Promise((resolve) => {
     const f = d.querySelector('form');
@@ -203,8 +203,8 @@ async function variantDialog(v) {
     { name: 'low_stock_threshold', label: 'Low-stock alert at', type: 'number', step: 1, min: 0 }, { name: 'sort_order', label: 'Sort order', type: 'number', step: 1 },
     { name: 'is_active', label: 'Available', type: 'checkbox' }];
   const d = document.createElement('dialog');
-  d.className = 'ad-dialog ad-dialog--wide';
-  d.innerHTML = `<h2>Edit variant</h2>${form(fields, v, { submit: 'Save variant', extra: '<button class="ad-btn" type="button" data-cancel>Cancel</button>' })}`;
+  d.className = 'cc-dialog cc-dialog--wide';
+  d.innerHTML = `<h2>Edit variant</h2>${form(fields, v, { submit: 'Save variant', extra: '<button class="cc-btn" type="button" data-cancel>Cancel</button>' })}`;
   document.body.append(d); d.showModal();
   const { bindColorMirrors } = await import('./ui.js'); bindColorMirrors(d);
   return new Promise((resolve) => {
@@ -222,14 +222,14 @@ async function variantDialog(v) {
 
 async function gridDialog(p, existing) {
   const d = document.createElement('dialog');
-  d.className = 'ad-dialog';
+  d.className = 'cc-dialog';
   d.innerHTML = `<form method="dialog"><h2>Add sizes × colours</h2>
-    <label class="ad-field"><span>Sizes</span><input name="sizes" value="S, M, L, XL, XXL"></label>
-    <label class="ad-field"><span>Colours (name #hex, one per line)</span><textarea name="colors" rows="4">Black #141414</textarea></label>
-    <label class="ad-field"><span>Starting stock per variant</span><input name="stock" type="number" min="0" step="1" value="0"></label>
-    <p class="ad-muted ad-small">Existing combinations are skipped. SKUs are generated from the product SKU or slug.</p>
-    <p class="ad-form-msg" data-msg></p>
-    <div class="ad-form-actions"><button class="ad-btn" type="button" data-cancel>Cancel</button><button class="ad-btn ad-btn--primary">Create variants</button></div></form>`;
+    <label class="cc-field"><span>Sizes</span><input name="sizes" value="S, M, L, XL, XXL"></label>
+    <label class="cc-field"><span>Colours (name #hex, one per line)</span><textarea name="colors" rows="4">Black #141414</textarea></label>
+    <label class="cc-field"><span>Starting stock per variant</span><input name="stock" type="number" min="0" step="1" value="0"></label>
+    <p class="cc-muted cc-small">Existing combinations are skipped. SKUs are generated from the product SKU or slug.</p>
+    <p class="cc-form-msg" data-msg></p>
+    <div class="cc-form-actions"><button class="cc-btn" type="button" data-cancel>Cancel</button><button class="cc-btn cc-btn--primary">Create variants</button></div></form>`;
   document.body.append(d); d.showModal();
   return new Promise((resolve) => {
     const f = d.querySelector('form');

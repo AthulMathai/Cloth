@@ -19,12 +19,12 @@ const TONE = {
   pending: 'warn', needs_review: 'warn', rejected: 'bad', new: 'warn', reviewing: 'info', quoted: 'info', accepted: 'good',
   declined: 'mute', expired: 'mute', converted: 'good',
 };
-export const pill = (s, text) => `<span class="ad-pill ad-pill--${TONE[s] || 'mute'}">${esc(text || label(s))}</span>`;
+export const pill = (s, text) => `<span class="cc-pill cc-pill--${TONE[s] || 'mute'}">${esc(text || label(s))}</span>`;
 
 /** columns: [{ key, label, render?(row), align? }] */
 export function table(rows, columns, { empty = 'Nothing here yet.', rowHref } = {}) {
-  if (!rows?.length) return `<p class="ad-empty">${esc(empty)}</p>`;
-  return `<div class="ad-table-wrap"><table class="ad-table">
+  if (!rows?.length) return `<p class="cc-empty">${esc(empty)}</p>`;
+  return `<div class="cc-table-wrap"><table class="cc-table">
     <thead><tr>${columns.map(c => `<th${c.align ? ` style="text-align:${c.align}"` : ''}>${esc(c.label)}</th>`).join('')}</tr></thead>
     <tbody>${rows.map(r => `<tr${rowHref ? ` data-href="${esc(rowHref(r))}" tabindex="0"` : ''}>${columns.map(c =>
       `<td${c.align ? ` style="text-align:${c.align}"` : ''}>${c.render ? c.render(r) : esc(r[c.key] ?? '')}</td>`).join('')}</tr>`).join('')}</tbody>
@@ -42,28 +42,28 @@ export function bindRowLinks(root, go) {
  * Form from a field list. Field: { name, label, type: text|textarea|number|money|select|checkbox|date|datetime|tags|json|color,
  *   options: [[value, label]], required, help, min, max, step, full }
  */
-export function form(fields, values = {}, { submit = 'Save', id = 'ad-form', extra = '' } = {}) {
-  return `<form class="ad-form" data-form="${id}" novalidate>
-    <div class="ad-fields">${fields.map(f => field(f, values[f.name])).join('')}</div>
-    <div class="ad-form-actions"><button class="ad-btn ad-btn--primary" type="submit">${esc(submit)}</button>${extra}
-      <span class="ad-form-msg" role="status" data-msg></span></div>
+export function form(fields, values = {}, { submit = 'Save', id = 'cc-form', extra = '' } = {}) {
+  return `<form class="cc-form" data-form="${id}" novalidate>
+    <div class="cc-fields">${fields.map(f => field(f, values[f.name])).join('')}</div>
+    <div class="cc-form-actions"><button class="cc-btn cc-btn--primary" type="submit">${esc(submit)}</button>${extra}
+      <span class="cc-form-msg" role="status" data-msg></span></div>
   </form>`;
 }
 function field(f, v) {
   const id = `f-${f.name}`, req = f.required ? ' required' : '';
-  const wrap = (inner, cls = '') => `<label class="ad-field${f.full ? ' is-full' : ''}${cls}" for="${id}"><span>${esc(f.label)}${f.required ? ' *' : ''}</span>${inner}${f.help ? `<small>${esc(f.help)}</small>` : ''}</label>`;
+  const wrap = (inner, cls = '') => `<label class="cc-field${f.full ? ' is-full' : ''}${cls}" for="${id}"><span>${esc(f.label)}${f.required ? ' *' : ''}</span>${inner}${f.help ? `<small>${esc(f.help)}</small>` : ''}</label>`;
   switch (f.type) {
     case 'textarea': return wrap(`<textarea id="${id}" name="${f.name}" rows="${f.rows || 4}"${req}>${esc(v ?? '')}</textarea>`);
     case 'select': return wrap(`<select id="${id}" name="${f.name}"${req}>${(f.options || []).map(([ov, ol]) =>
       `<option value="${esc(ov ?? '')}"${String(v ?? '') === String(ov ?? '') ? ' selected' : ''}>${esc(ol)}</option>`).join('')}</select>`);
-    case 'checkbox': return `<label class="ad-check${f.full ? ' is-full' : ''}"><input type="checkbox" name="${f.name}"${v ? ' checked' : ''}> <span>${esc(f.label)}</span>${f.help ? `<small>${esc(f.help)}</small>` : ''}</label>`;
+    case 'checkbox': return `<label class="cc-check${f.full ? ' is-full' : ''}"><input type="checkbox" name="${f.name}"${v ? ' checked' : ''}> <span>${esc(f.label)}</span>${f.help ? `<small>${esc(f.help)}</small>` : ''}</label>`;
     case 'money': return wrap(`<input id="${id}" name="${f.name}" inputmode="decimal" value="${v == null || v === '' ? '' : (v / 100).toFixed(2)}" placeholder="0.00"${req}>`);
     case 'number': return wrap(`<input id="${id}" name="${f.name}" type="number" value="${esc(v ?? '')}"${f.min != null ? ` min="${f.min}"` : ''}${f.max != null ? ` max="${f.max}"` : ''} step="${f.step || 'any'}"${req}>`);
     case 'date': return wrap(`<input id="${id}" name="${f.name}" type="date" value="${v ? String(v).slice(0, 10) : ''}"${req}>`);
     case 'datetime': return wrap(`<input id="${id}" name="${f.name}" type="datetime-local" value="${v ? toLocalInput(v) : ''}"${req}>`);
     case 'tags': return wrap(`<input id="${id}" name="${f.name}" value="${esc((v || []).join(', '))}" placeholder="comma, separated"${req}>`);
-    case 'json': return wrap(`<textarea id="${id}" name="${f.name}" rows="${f.rows || 4}" class="ad-mono">${esc(v == null ? '' : JSON.stringify(v, null, 2))}</textarea>`);
-    case 'color': return wrap(`<span class="ad-color"><input type="color" value="${esc(v || '#141414')}" data-mirror="${id}"><input id="${id}" name="${f.name}" value="${esc(v || '')}" placeholder="#141414"></span>`);
+    case 'json': return wrap(`<textarea id="${id}" name="${f.name}" rows="${f.rows || 4}" class="cc-mono">${esc(v == null ? '' : JSON.stringify(v, null, 2))}</textarea>`);
+    case 'color': return wrap(`<span class="cc-color"><input type="color" value="${esc(v || '#141414')}" data-mirror="${id}"><input id="${id}" name="${f.name}" value="${esc(v || '')}" placeholder="#141414"></span>`);
     default: return wrap(`<input id="${id}" name="${f.name}" type="${f.type || 'text'}" value="${esc(v ?? '')}"${f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : ''}${req}>`);
   }
 }
@@ -103,10 +103,10 @@ export function bindColorMirrors(root) {
 }
 
 export function toast(msg, tone = 'good') {
-  let host = document.querySelector('.ad-toasts');
-  if (!host) { host = document.createElement('div'); host.className = 'ad-toasts'; host.setAttribute('aria-live', 'polite'); document.body.append(host); }
+  let host = document.querySelector('.cc-toasts');
+  if (!host) { host = document.createElement('div'); host.className = 'cc-toasts'; host.setAttribute('aria-live', 'polite'); document.body.append(host); }
   const t = document.createElement('div');
-  t.className = `ad-toast ad-toast--${tone}`; t.textContent = msg;
+  t.className = `cc-toast cc-toast--${tone}`; t.textContent = msg;
   host.append(t);
   setTimeout(() => { t.classList.add('is-out'); setTimeout(() => t.remove(), 300); }, tone === 'bad' ? 6000 : 3200);
 }
@@ -116,15 +116,15 @@ export function confirmDialog({ title, body = '', confirm = 'Confirm', tone = 'p
                                 amount = null, checkbox = null }) {
   return new Promise((resolve) => {
     const d = document.createElement('dialog');
-    d.className = 'ad-dialog';
+    d.className = 'cc-dialog';
     d.innerHTML = `<form method="dialog">
-      <h2>${esc(title)}</h2>${body ? `<div class="ad-dialog-body">${body}</div>` : ''}
-      ${amount ? `<label class="ad-field"><span>${esc(amount.label)}</span><input name="amount" inputmode="decimal" value="${(amount.value / 100).toFixed(2)}"></label>` : ''}
-      ${note ? `<label class="ad-field"><span>${esc(noteLabel)}${noteRequired ? ' *' : ''}</span><textarea name="note" rows="3"></textarea></label>` : ''}
-      ${checkbox ? `<label class="ad-check"><input type="checkbox" name="cb"${checkbox.checked ? ' checked' : ''}> <span>${esc(checkbox.label)}</span></label>` : ''}
-      <p class="ad-form-msg" data-msg></p>
-      <div class="ad-form-actions"><button class="ad-btn" value="cancel" type="button" data-cancel>Cancel</button>
-        <button class="ad-btn ad-btn--${tone}" value="ok">${esc(confirm)}</button></div></form>`;
+      <h2>${esc(title)}</h2>${body ? `<div class="cc-dialog-body">${body}</div>` : ''}
+      ${amount ? `<label class="cc-field"><span>${esc(amount.label)}</span><input name="amount" inputmode="decimal" value="${(amount.value / 100).toFixed(2)}"></label>` : ''}
+      ${note ? `<label class="cc-field"><span>${esc(noteLabel)}${noteRequired ? ' *' : ''}</span><textarea name="note" rows="3"></textarea></label>` : ''}
+      ${checkbox ? `<label class="cc-check"><input type="checkbox" name="cb"${checkbox.checked ? ' checked' : ''}> <span>${esc(checkbox.label)}</span></label>` : ''}
+      <p class="cc-form-msg" data-msg></p>
+      <div class="cc-form-actions"><button class="cc-btn" value="cancel" type="button" data-cancel>Cancel</button>
+        <button class="cc-btn cc-btn--${tone}" value="ok">${esc(confirm)}</button></div></form>`;
     document.body.append(d);
     const f = d.querySelector('form');
     const done = (r) => { d.close(); d.remove(); resolve(r); };
@@ -142,12 +142,12 @@ export function confirmDialog({ title, body = '', confirm = 'Confirm', tone = 'p
       done({ ok: true, note: n, amount: a, checked: f.cb?.checked });
     };
     d.showModal();
-    (f.note || f.amount || d.querySelector('.ad-btn--' + tone)).focus();
+    (f.note || f.amount || d.querySelector('.cc-btn--' + tone)).focus();
   });
 }
 
 export const kpi = (labelText, value, sub = '', href = '') =>
-  `<${href ? `a href="${esc(href)}"` : 'div'} class="ad-kpi"><span class="ad-kpi-label">${esc(labelText)}</span><strong>${value}</strong>${sub ? `<small>${sub}</small>` : ''}</${href ? 'a' : 'div'}>`;
+  `<${href ? `a href="${esc(href)}"` : 'div'} class="cc-kpi"><span class="cc-kpi-label">${esc(labelText)}</span><strong>${value}</strong>${sub ? `<small>${sub}</small>` : ''}</${href ? 'a' : 'div'}>`;
 
 export function errorText(e) {
   const m = e?.message || String(e);

@@ -16,20 +16,20 @@ async function list(ctx) {
   const qs = (o) => '/admin/orders?' + new URLSearchParams(Object.entries({ q, group, page: 0, ...o }).filter(([, v]) => v !== '' && v !== 0)).toString();
   return {
     title: 'Orders',
-    html: `<header class="ad-head"><div><h1>Orders</h1><p class="ad-muted">${num(r.total)} ${group ? label(GROUPS.find(g => g[0] === group)?.[1] || group).toLowerCase() : ''} orders</p></div>
-      <form class="ad-search" data-search role="search"><input name="q" value="${esc(q)}" placeholder="Order number, email or name" aria-label="Search orders"><button class="ad-btn">Search</button></form></header>
-      <nav class="ad-tabs">${GROUPS.map(([g, l]) => `<a href="${qs({ group: g })}"${g === group ? ' aria-current="true"' : ''}>${esc(l)}</a>`).join('')}</nav>
-      <section class="ad-card ad-card--flush">${table(r.rows, [
-        { label: 'Order', render: o => `<a href="/admin/orders/${o.id}"><strong>${esc(o.number)}</strong></a>${o.custom ? ' <span class="ad-tag">Custom</span>' : ''}${o.limited ? ' <span class="ad-tag">Limited</span>' : ''}` },
-        { label: 'Customer', render: o => `${esc(o.name || '')}<br><span class="ad-muted ad-small">${esc(o.email)}</span>` },
+    html: `<header class="cc-head"><div><h1>Orders</h1><p class="cc-muted">${num(r.total)} ${group ? label(GROUPS.find(g => g[0] === group)?.[1] || group).toLowerCase() : ''} orders</p></div>
+      <form class="cc-search" data-search role="search"><input name="q" value="${esc(q)}" placeholder="Order number, email or name" aria-label="Search orders"><button class="cc-btn">Search</button></form></header>
+      <nav class="cc-tabs">${GROUPS.map(([g, l]) => `<a href="${qs({ group: g })}"${g === group ? ' aria-current="true"' : ''}>${esc(l)}</a>`).join('')}</nav>
+      <section class="cc-card cc-card--flush">${table(r.rows, [
+        { label: 'Order', render: o => `<a href="/admin/orders/${o.id}"><strong>${esc(o.number)}</strong></a>${o.custom ? ' <span class="cc-tag">Custom</span>' : ''}${o.limited ? ' <span class="cc-tag">Limited</span>' : ''}` },
+        { label: 'Customer', render: o => `${esc(o.name || '')}<br><span class="cc-muted cc-small">${esc(o.email)}</span>` },
         { key: 'province', label: 'Prov.' },
         { label: 'Items', align: 'right', render: o => num(o.units) },
         { label: 'Status', render: o => pill(o.status) },
         { label: 'Total', align: 'right', render: o => money(o.total_cents) },
         { label: 'Placed', render: o => dateTime(o.created_at) }],
         { empty: q ? 'No orders match that search.' : 'No orders here yet.', rowHref: o => `/admin/orders/${o.id}` })}</section>
-      <nav class="ad-pager">${page > 0 ? `<a class="ad-btn" href="${qs({ page: page - 1 })}">← Newer</a>` : ''}
-        ${(page + 1) * PAGE < r.total ? `<a class="ad-btn" href="${qs({ page: page + 1 })}">Older →</a>` : ''}</nav>`,
+      <nav class="cc-pager">${page > 0 ? `<a class="cc-btn" href="${qs({ page: page - 1 })}">← Newer</a>` : ''}
+        ${(page + 1) * PAGE < r.total ? `<a class="cc-btn" href="${qs({ page: page + 1 })}">Older →</a>` : ''}</nav>`,
     mount(root) {
       bindRowLinks(root, ctx.go);
       root.querySelector('[data-search]').onsubmit = (e) => { e.preventDefault(); ctx.go(qs({ q: e.target.q.value.trim() })); };
@@ -39,7 +39,7 @@ async function list(ctx) {
 
 async function detail(ctx, id) {
   const d = await db.rpc('admin_order', { p_order_id: id });
-  if (!d) return { title: 'Order not found', html: '<p class="ad-empty">Order not found.</p>' };
+  if (!d) return { title: 'Order not found', html: '<p class="cc-empty">Order not found.</p>' };
   const o = d.order, a = o.shipping_address || {}, c = d.customer;
   // artwork previews (private buckets; staff with orders.read may sign them)
   const mockPaths = d.items.flatMap(i => Object.values(i.design?.version_mockups || i.design?.mockups || {}));
@@ -51,26 +51,26 @@ async function detail(ctx, id) {
   const can = d.can;
 
   const actions = [
-    can.write ? '<button class="ad-btn" data-act="note">Add note</button>' : '',
-    can.write && !closed && !shipped && o.status !== 'on_hold' && o.status !== 'payment_pending' ? '<button class="ad-btn" data-act="hold">Put on hold</button>' : '',
-    can.write && o.status === 'on_hold' && o.paid_at ? '<button class="ad-btn ad-btn--primary" data-act="resume">Release hold</button>' : '',
-    can.write && !closed && !shipped ? '<button class="ad-btn ad-btn--danger" data-act="cancel">Cancel order</button>' : '',
-    can.refund && refundable > 0 ? `<button class="ad-btn" data-act="refund">Refund…</button>` : '',
+    can.write ? '<button class="cc-btn" data-act="note">Add note</button>' : '',
+    can.write && !closed && !shipped && o.status !== 'on_hold' && o.status !== 'payment_pending' ? '<button class="cc-btn" data-act="hold">Put on hold</button>' : '',
+    can.write && o.status === 'on_hold' && o.paid_at ? '<button class="cc-btn cc-btn--primary" data-act="resume">Release hold</button>' : '',
+    can.write && !closed && !shipped ? '<button class="cc-btn cc-btn--danger" data-act="cancel">Cancel order</button>' : '',
+    can.refund && refundable > 0 ? `<button class="cc-btn" data-act="refund">Refund…</button>` : '',
   ].join('');
 
   return {
     title: `Order ${o.number}`,
-    html: `<p class="ad-crumbs"><a href="/admin/orders">Orders</a> / ${esc(o.number)}</p>
-      <header class="ad-head"><div><h1>${esc(o.number)} ${pill(o.status)}</h1>
-        <p class="ad-muted">Placed ${dateTime(o.created_at)}${o.paid_at ? ` · paid ${dateTime(o.paid_at)} via ${esc(o.payment_provider || '—')}` : ' · not paid'}${o.payment_provider === 'mock' ? ' <span class="ad-tag">test payment</span>' : ''}</p></div>
-        <div class="ad-actions">${actions}</div></header>
-      ${o.status === 'on_hold' ? `<div class="ad-alert ad-alert--bad"><strong>On hold.</strong> ${esc([...d.events].reverse().find(e => e.status === 'on_hold')?.note || 'Needs attention.')}</div>` : ''}
-      ${o.status === 'cancelled' && refundable > 0 ? `<div class="ad-alert ad-alert--warn"><strong>Cancelled but not refunded.</strong> ${money(refundable)} is still to be refunded.</div>` : ''}
-      <div class="ad-two ad-two--wide">
+    html: `<p class="cc-crumbs"><a href="/admin/orders">Orders</a> / ${esc(o.number)}</p>
+      <header class="cc-head"><div><h1>${esc(o.number)} ${pill(o.status)}</h1>
+        <p class="cc-muted">Placed ${dateTime(o.created_at)}${o.paid_at ? ` · paid ${dateTime(o.paid_at)} via ${esc(o.payment_provider || '—')}` : ' · not paid'}${o.payment_provider === 'mock' ? ' <span class="cc-tag">test payment</span>' : ''}</p></div>
+        <div class="cc-actions">${actions}</div></header>
+      ${o.status === 'on_hold' ? `<div class="cc-alert cc-alert--bad"><strong>On hold.</strong> ${esc([...d.events].reverse().find(e => e.status === 'on_hold')?.note || 'Needs attention.')}</div>` : ''}
+      ${o.status === 'cancelled' && refundable > 0 ? `<div class="cc-alert cc-alert--warn"><strong>Cancelled but not refunded.</strong> ${money(refundable)} is still to be refunded.</div>` : ''}
+      <div class="cc-two cc-two--wide">
         <div>
-          <section class="ad-card"><h2>Items</h2>
-            <ul class="ad-items">${d.items.map(i => itemHTML(i, mocks, prods)).join('')}</ul>
-            <dl class="ad-totals">
+          <section class="cc-card"><h2>Items</h2>
+            <ul class="cc-items">${d.items.map(i => itemHTML(i, mocks, prods)).join('')}</ul>
+            <dl class="cc-totals">
               <dt>Subtotal</dt><dd>${money(o.subtotal_cents)}</dd>
               ${o.discount_cents ? `<dt>Discount ${esc(o.discount_code || '')}</dt><dd>−${money(o.discount_cents)}</dd>` : ''}
               <dt>${esc(o.shipping_rate?.label || 'Shipping')}</dt><dd>${o.shipping_cents ? money(o.shipping_cents) : 'Free'}</dd>
@@ -78,26 +78,26 @@ async function detail(ctx, id) {
               <dt class="is-total">Total</dt><dd class="is-total">${money(o.total_cents)}</dd>
               ${d.refunded_cents ? `<dt>Refunded</dt><dd>−${money(d.refunded_cents)}</dd>` : ''}
             </dl></section>
-          <section class="ad-card"><h2>History</h2>
-            <ol class="ad-timeline">${[...d.events].reverse().map(e => `<li class="ad-tl-${esc(e.actor_type)}">
+          <section class="cc-card"><h2>History</h2>
+            <ol class="cc-timeline">${[...d.events].reverse().map(e => `<li class="cc-tl-${esc(e.actor_type)}">
               <div><strong>${esc(eventTitle(e))}</strong>${e.status && e.event !== 'note' ? ' ' + pill(e.status) : ''}
                 ${e.note ? `<p>${esc(e.note)}</p>` : ''}</div>
-              <span class="ad-muted ad-small">${dateTime(e.at)} · ${esc(e.actor || label(e.actor_type))}</span></li>`).join('')}</ol>
-            <p class="ad-muted ad-small">History is append-only: entries can't be edited or deleted.</p></section>
+              <span class="cc-muted cc-small">${dateTime(e.at)} · ${esc(e.actor || label(e.actor_type))}</span></li>`).join('')}</ol>
+            <p class="cc-muted cc-small">History is append-only: entries can't be edited or deleted.</p></section>
         </div>
         <div>
-          <section class="ad-card"><h2>Customer</h2>
+          <section class="cc-card"><h2>Customer</h2>
             <p><strong>${esc(c.profile?.full_name || a.full_name || '')}</strong><br><a href="mailto:${esc(o.email)}">${esc(o.email)}</a>${o.phone ? `<br>${esc(o.phone)}` : ''}</p>
-            <p class="ad-muted">${num(c.orders)} paid order${c.orders === 1 ? '' : 's'} · ${money(c.spent_cents)} lifetime${c.profile ? ` · customer since ${date(c.profile.created_at)}` : ' · guest'}</p>
-            ${c.profile ? `<a class="ad-btn ad-btn--small" href="/admin/customers?q=${encodeURIComponent(o.email)}">Customer record</a>` : ''}</section>
-          <section class="ad-card"><h2>Shipping</h2>
+            <p class="cc-muted">${num(c.orders)} paid order${c.orders === 1 ? '' : 's'} · ${money(c.spent_cents)} lifetime${c.profile ? ` · customer since ${date(c.profile.created_at)}` : ' · guest'}</p>
+            ${c.profile ? `<a class="cc-btn cc-btn--small" href="/admin/customers?q=${encodeURIComponent(o.email)}">Customer record</a>` : ''}</section>
+          <section class="cc-card"><h2>Shipping</h2>
             <address>${esc(a.full_name)}<br>${esc(a.line1)}${a.line2 ? '<br>' + esc(a.line2) : ''}<br>${esc(a.city)}, ${esc(a.province)} ${esc(a.postal_code)}</address>
-            <p class="ad-muted">${esc(o.shipping_rate?.label || '')}${o.shipping_rate ? ` · ${o.shipping_rate.min_days}–${o.shipping_rate.max_days} business days` : ''}</p>
-            <p class="ad-muted ad-small">Carrier, tracking and the production partner appear here once fulfillment partners are connected (Phase 7).</p></section>
-          <section class="ad-card"><h2>Payments</h2>${table(d.payments, [
+            <p class="cc-muted">${esc(o.shipping_rate?.label || '')}${o.shipping_rate ? ` · ${o.shipping_rate.min_days}–${o.shipping_rate.max_days} business days` : ''}</p>
+            <p class="cc-muted cc-small">Carrier, tracking and the production partner appear here once fulfillment partners are connected (Phase 7).</p></section>
+          <section class="cc-card"><h2>Payments</h2>${table(d.payments, [
             { label: 'Type', render: p => label(p.kind) }, { key: 'provider', label: 'Provider' },
             { label: 'Amount', align: 'right', render: p => (p.kind === 'refund' ? '−' : '') + money(p.amount_cents) }, { label: 'When', render: p => dateTime(p.at) },
-            { label: 'Reference', render: p => `<code class="ad-small">${esc(p.ref)}</code>` }], { empty: 'No payments yet.' })}</section>
+            { label: 'Reference', render: p => `<code class="cc-small">${esc(p.ref)}</code>` }], { empty: 'No payments yet.' })}</section>
         </div>
       </div>`,
     mount(root) {
@@ -106,7 +106,7 @@ async function detail(ctx, id) {
         try { const r = await db.rpc(fn, args); toast(ok(r)); reload(); }
         catch (e) { toast(errorText(e), 'bad'); }
       };
-      root.querySelector('.ad-actions')?.addEventListener('click', async (e) => {
+      root.querySelector('.cc-actions')?.addEventListener('click', async (e) => {
         const act = e.target.closest('[data-act]')?.dataset.act;
         if (act === 'note') {
           const r = await confirmDialog({ title: 'Add a note', note: true, noteLabel: 'Internal note (staff only)', noteRequired: true, confirm: 'Add note' });
@@ -149,20 +149,20 @@ function itemHTML(i, mocks, prods) {
   const d = i.design;
   const mock = d && Object.values(d.version_mockups || d.mockups || {})[0];
   const files = d ? Object.entries(d.production_files || {}) : [];
-  return `<li class="ad-item">
-    <div class="ad-item-thumb">${mock && mocks[mock] ? `<img src="${mocks[mock]}" alt="Mockup of ${esc(i.name)}">` : `<span style="background:${esc(i.color_hex || '#ccc')}"></span>`}</div>
-    <div class="ad-item-info">
-      <strong>${esc(i.name)}</strong> <span class="ad-muted">× ${i.quantity}</span>
-      <div class="ad-muted ad-small">${esc([i.color, i.size, i.sku].filter(Boolean).join(' · '))}</div>
-      ${i.edition_numbers?.length ? `<div class="ad-small">Edition ${i.edition_numbers.map(n => `No. ${String(n).padStart(3, '0')} / ${i.edition_size}`).join(', ')}</div>` : ''}
-      ${d ? `<div class="ad-small">Custom design “${esc(d.name)}” v${i.design_version} · ${pill(d.approved_version === i.design_version ? 'approved' : d.status)}
+  return `<li class="cc-item">
+    <div class="cc-item-thumb">${mock && mocks[mock] ? `<img src="${mocks[mock]}" alt="Mockup of ${esc(i.name)}">` : `<span style="background:${esc(i.color_hex || '#ccc')}"></span>`}</div>
+    <div class="cc-item-info">
+      <strong>${esc(i.name)}</strong> <span class="cc-muted">× ${i.quantity}</span>
+      <div class="cc-muted cc-small">${esc([i.color, i.size, i.sku].filter(Boolean).join(' · '))}</div>
+      ${i.edition_numbers?.length ? `<div class="cc-small">Edition ${i.edition_numbers.map(n => `No. ${String(n).padStart(3, '0')} / ${i.edition_size}`).join(', ')}</div>` : ''}
+      ${d ? `<div class="cc-small">Custom design “${esc(d.name)}” v${i.design_version} · ${pill(d.approved_version === i.design_version ? 'approved' : d.status)}
           ${d.moderation ? ` · automated risk ${d.moderation.risk_score}/100` : ''}
           · <a href="/admin/designs?id=${i.design_id}">moderation</a></div>
-        ${(d.print || []).length ? `<div class="ad-small ad-muted">${d.print.map(p => `${esc(p.placement_label || p.placement)} ${esc(p.area_label?.split(' (')[0] || '')} ${esc(p.method_label || '')}`).join(' + ')}</div>` : ''}
-        ${files.length ? `<div class="ad-small">Print files: ${files.map(([k, p]) => prods[p] ? `<a href="${prods[p]}" target="_blank" rel="noopener">${esc(label(k))}</a>` : esc(label(k))).join(' · ')}</div>` : ''}` : ''}
-      ${i.costs?.cost ? `<div class="ad-small ad-muted">Production cost ${money(i.costs.cost.unit_cents)}/item${i.costs.margin_pct != null ? ` · est. margin ${i.costs.margin_pct}% (${money(i.costs.margin_cents)})` : ''}</div>` : ''}
+        ${(d.print || []).length ? `<div class="cc-small cc-muted">${d.print.map(p => `${esc(p.placement_label || p.placement)} ${esc(p.area_label?.split(' (')[0] || '')} ${esc(p.method_label || '')}`).join(' + ')}</div>` : ''}
+        ${files.length ? `<div class="cc-small">Print files: ${files.map(([k, p]) => prods[p] ? `<a href="${prods[p]}" target="_blank" rel="noopener">${esc(label(k))}</a>` : esc(label(k))).join(' · ')}</div>` : ''}` : ''}
+      ${i.costs?.cost ? `<div class="cc-small cc-muted">Production cost ${money(i.costs.cost.unit_cents)}/item${i.costs.margin_pct != null ? ` · est. margin ${i.costs.margin_pct}% (${money(i.costs.margin_cents)})` : ''}</div>` : ''}
     </div>
-    <div class="ad-item-price">${money(i.line_total_cents)}${i.discount_cents ? `<br><span class="ad-muted ad-small">−${money(i.discount_cents)} disc.</span>` : ''}</div></li>`;
+    <div class="cc-item-price">${money(i.line_total_cents)}${i.discount_cents ? `<br><span class="cc-muted cc-small">−${money(i.discount_cents)} disc.</span>` : ''}</div></li>`;
 }
 
 function eventTitle(e) {

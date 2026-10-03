@@ -66,15 +66,15 @@ export async function load({ rest = '' }, query) {
   ensureCss();
   const theme = await themeForPage('account');
   if (!auth.user) {
-    return { theme, title: 'Admin', html: `<section class="ad-gate"><h1>Admin</h1><p>Sign in with your staff account.</p>
-      <p><a class="ad-btn ad-btn--primary" href="/account/sign-in?next=${encodeURIComponent(location.pathname + location.search)}">Sign in</a></p></section>` };
+    return { theme, title: 'Admin', html: `<section class="cc-gate"><h1>Admin</h1><p>Sign in with your staff account.</p>
+      <p><a class="cc-btn cc-btn--primary" href="/account/sign-in?next=${encodeURIComponent(location.pathname + location.search)}">Sign in</a></p></section>` };
   }
   const perms = await loadPerms();
   if (!perms.size) {
-    return { theme, title: 'Admin', html: `<section class="ad-gate"><h1>No admin access</h1>
+    return { theme, title: 'Admin', html: `<section class="cc-gate"><h1>No admin access</h1>
       <p>This account (${esc(auth.user.email)}) isn't on the staff list. Ask an admin to add you under Users &amp; roles.</p>
-      <p class="ad-muted">Store owner setting this up for the first time? Confirm your email address, then reload this page.</p>
-      <p><a class="ad-btn" href="/">Back to the store</a></p></section>` };
+      <p class="cc-muted">Store owner setting this up for the first time? Confirm your email address, then reload this page.</p>
+      <p><a class="cc-btn" href="/">Back to the store</a></p></section>` };
   }
   const can = (p) => perms.has('*') || p === 'staff' || perms.has(p);
   const segs = rest.split('/').filter(Boolean);
@@ -84,30 +84,30 @@ export async function load({ rest = '' }, query) {
   const ctx = { segs, key, query, perms, can, go, user: auth.user };
   let view;
   try {
-    view = loader ? await (await loader()).view(ctx) : { title: 'Not found', html: '<p class="ad-empty">That admin page doesn\'t exist.</p>' };
+    view = loader ? await (await loader()).view(ctx) : { title: 'Not found', html: '<p class="cc-empty">That admin page doesn\'t exist.</p>' };
   } catch (e) {
     console.error(e);
-    view = { title: 'Error', html: `<div class="ad-alert ad-alert--bad"><strong>Couldn't load this page.</strong> ${esc(e.message || e)}</div>` };
+    view = { title: 'Error', html: `<div class="cc-alert cc-alert--bad"><strong>Couldn't load this page.</strong> ${esc(e.message || e)}</div>` };
   }
   const here = location.pathname + location.search;
   return {
     theme, title: `${view.title || 'Admin'} · Admin`,
-    html: `<div class="ad">
-      <aside class="ad-side" aria-label="Admin">
-        <a class="ad-brand" href="/admin">Control center</a>
+    html: `<div class="cc">
+      <aside class="cc-side" aria-label="Admin">
+        <a class="cc-brand" href="/admin">Control center</a>
         <nav>${NAV.filter(n => can(n.perm)).map(n => n.href
-          ? `<a class="ad-nav-top" href="${n.href}"${key === '' ? ' aria-current="page"' : ''}>${esc(n.label)}</a>`
-          : `<details class="ad-nav-group" ${n.items.some(([, h]) => here === h || (here.startsWith(h.split('?')[0]) && h.split('?')[0] !== '/admin')) ? 'open' : ''}>
+          ? `<a class="cc-nav-top" href="${n.href}"${key === '' ? ' aria-current="page"' : ''}>${esc(n.label)}</a>`
+          : `<details class="cc-nav-group" ${n.items.some(([, h]) => here === h || (here.startsWith(h.split('?')[0]) && h.split('?')[0] !== '/admin')) ? 'open' : ''}>
               <summary>${esc(n.group)}</summary>
               ${n.items.filter(([, , p]) => !p || can(p)).map(([l, h]) => `<a href="${h}"${here === h ? ' aria-current="page"' : ''}>${esc(l)}</a>`).join('')}
             </details>`).join('')}</nav>
-        <div class="ad-side-foot"><span>${esc(auth.user.email)}</span><a href="/">View store ↗</a></div>
+        <div class="cc-side-foot"><span>${esc(auth.user.email)}</span><a href="/">View store ↗</a></div>
       </aside>
-      <main class="ad-main">${view.html}</main>
+      <main class="cc-main">${view.html}</main>
     </div>`,
     mount(root) {
-      root.querySelector('.ad-side').addEventListener('toggle', () => {}, true);
-      return view.mount?.(root.querySelector('.ad-main'), ctx);
+      root.querySelector('.cc-side').addEventListener('toggle', () => {}, true);
+      return view.mount?.(root.querySelector('.cc-main'), ctx);
     },
   };
 }

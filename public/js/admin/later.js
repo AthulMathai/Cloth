@@ -5,6 +5,6 @@ const INFO = {
 };
 export async function view(ctx) {
   const [title, phase, text] = INFO[ctx.key];
-  return { title, html: `<header class="ad-head"><h1>${title}</h1></header>
-    <section class="ad-card"><p><span class="ad-tag">Coming in ${phase}</span></p><p>${text}</p></section>` };
+  return { title, html: `<header class="cc-head"><h1>${title}</h1></header>
+    <section class="cc-card"><p><span class="cc-tag">Coming in ${phase}</span></p><p>${text}</p></section>` };
 }

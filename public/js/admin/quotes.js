@@ -12,11 +12,11 @@ export async function view(ctx) {
   const rows = await q;
   return {
     title: 'Quotes',
-    html: `<header class="ad-head"><div><h1>Quote requests</h1><p class="ad-muted">${rows.length} shown</p></div></header>
-      <nav class="ad-tabs"><a href="/admin/quotes"${!status ? ' aria-current="true"' : ''}>All</a>${STATUSES.map(s => `<a href="/admin/quotes?status=${s}"${s === status ? ' aria-current="true"' : ''}>${label(s)}</a>`).join('')}</nav>
-      <section class="ad-card ad-card--flush">${table(rows, [
+    html: `<header class="cc-head"><div><h1>Quote requests</h1><p class="cc-muted">${rows.length} shown</p></div></header>
+      <nav class="cc-tabs"><a href="/admin/quotes"${!status ? ' aria-current="true"' : ''}>All</a>${STATUSES.map(s => `<a href="/admin/quotes?status=${s}"${s === status ? ' aria-current="true"' : ''}>${label(s)}</a>`).join('')}</nav>
+      <section class="cc-card cc-card--flush">${table(rows, [
         { label: 'Quote', render: r => `<strong>${esc(r.number)}</strong>` },
-        { label: 'Customer', render: r => `${esc(r.name)}<br><span class="ad-muted ad-small">${esc(r.email)}</span>` },
+        { label: 'Customer', render: r => `${esc(r.name)}<br><span class="cc-muted cc-small">${esc(r.email)}</span>` },
         { label: 'Pieces', align: 'right', render: r => num(r.quantity) },
         { label: 'Estimate', align: 'right', render: r => r.estimate?.total_cents ? money(r.estimate.total_cents) : '—' },
         { label: 'Proposed', align: 'right', render: r => r.proposed_total_cents ? money(r.proposed_total_cents) : '—' },
@@ -29,7 +29,7 @@ export async function view(ctx) {
 
 async function edit(ctx, id) {
   const r = await db.from('quote_requests').select('*').eq('id', id).single().catch(() => null);
-  if (!r) return { title: 'Not found', html: '<p class="ad-empty">Quote not found.</p>' };
+  if (!r) return { title: 'Not found', html: '<p class="cc-empty">Quote not found.</p>' };
   const fields = [
     { name: 'status', label: 'Status', type: 'select', options: STATUSES.map(s => [s, label(s)]) },
     { name: 'proposed_unit_cents', label: 'Price per item', type: 'money' },
@@ -41,10 +41,10 @@ async function edit(ctx, id) {
   const e = r.estimate || {};
   return {
     title: `Quote ${r.number}`,
-    html: `<p class="ad-crumbs"><a href="/admin/quotes">Quotes</a> / ${esc(r.number)}</p>
-      <header class="ad-head"><h1>${esc(r.number)} ${pill(r.status)}</h1></header>
-      <div class="ad-two">
-        <section class="ad-card"><h2>Request</h2><dl class="ad-dl">
+    html: `<p class="cc-crumbs"><a href="/admin/quotes">Quotes</a> / ${esc(r.number)}</p>
+      <header class="cc-head"><h1>${esc(r.number)} ${pill(r.status)}</h1></header>
+      <div class="cc-two">
+        <section class="cc-card"><h2>Request</h2><dl class="cc-dl">
           <dt>Customer</dt><dd>${esc(r.name)} · <a href="mailto:${esc(r.email)}">${esc(r.email)}</a>${r.phone ? ` · ${esc(r.phone)}` : ''}</dd>
           <dt>Pieces</dt><dd>${num(r.quantity)}</dd>
           <dt>Sizes</dt><dd>${esc(Object.entries(r.size_breakdown || {}).map(([s, n]) => `${n} ${s}`).join(', ') || '—')}</dd>
@@ -53,8 +53,8 @@ async function edit(ctx, id) {
           ${r.design_id ? `<dt>Design</dt><dd><a href="/admin/designs?id=${r.design_id}">Open artwork & moderation</a></dd>` : ''}
           <dt>Engine estimate</dt><dd>${e.total_cents ? `${money(e.unit_cents)} each · ${money(e.total_cents)} total (standard tiers, before quote pricing)` : '—'}</dd>
         </dl></section>
-        <section class="ad-card"><h2>Your quote</h2>${form(fields, r, { submit: 'Save quote' })}
-          <p class="ad-muted ad-small">Email the customer the quote from your inbox for now; sending from the store needs an email provider. Converting an accepted quote into an order arrives with the CRM phase.</p></section>
+        <section class="cc-card"><h2>Your quote</h2>${form(fields, r, { submit: 'Save quote' })}
+          <p class="cc-muted cc-small">Email the customer the quote from your inbox for now; sending from the store needs an email provider. Converting an accepted quote into an order arrives with the CRM phase.</p></section>
       </div>`,
     mount(root) {
       const f = root.querySelector('[data-form]');
