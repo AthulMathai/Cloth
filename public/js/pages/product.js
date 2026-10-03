@@ -3,7 +3,7 @@ import { db } from '../lib/supabase.js';
 import { categoryById, themeForCategory, money, pad3, fmtDate } from '../lib/store.js';
 import { esc, garmentSVG, calloutSVG, priceHTML, startCountdowns } from '../components/ui.js';
 import { track } from '../lib/analytics.js';
-import { addToBag } from '../lib/cart.js';
+import { addToBag, signInUrl } from '../lib/cart.js';
 
 export async function load({ slug }) {
   const p = await db.from('storefront_products').select('*').eq('slug', slug).single().catch(() => null);
@@ -91,7 +91,10 @@ export async function load({ slug }) {
           try {
             await addToBag(v.id, 1, { product: p.slug, limited: !!p.drop_id });
             added.innerHTML = `Added ${esc(p.name)} (${esc(v.color)} / ${esc(v.size)}). <a href="/cart">View bag</a> or <a href="/checkout">check out</a>.`;
-          } catch (e) { added.textContent = e.message; }
+          } catch (e) {
+            if (e.signIn) added.innerHTML = `<a href="${signInUrl()}">Sign in</a> or <a href="/account/sign-up?next=${encodeURIComponent(location.pathname)}">create an account</a> to add this to your bag.`;
+            else added.textContent = e.message;
+          }
           add.disabled = false;
         };
       };

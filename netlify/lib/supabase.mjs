@@ -44,6 +44,21 @@ export async function rest(path, { method = 'GET', body, prefer } = {}) {
   return data;
 }
 
+/** Calls a database function AS the signed-in caller (their JWT), so the
+ *  database's own permission checks apply. */
+export async function rpcAs(token, fn, args = {}) {
+  const key = process.env.SUPABASE_ANON_KEY || serviceKey();
+  const res = await fetch(`${url()}/rest/v1/rpc/${fn}`, {
+    method: 'POST',
+    headers: { apikey: key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(args),
+  });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) throw new DbError(res.status, data);
+  return data;
+}
+
 /** Verifies the caller's Supabase session (if any) and returns the user. */
 export async function getUser(req) {
   const auth = req.headers.get('authorization') || '';

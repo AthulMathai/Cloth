@@ -24,6 +24,7 @@ function checkoutKey(reset = false) {
 export async function load(_, query) {
   const theme = await themeForPage('account');
   const user = auth.user;
+  if (!user) return (await import('./cart.js')).signInPage(theme, 'Checkout', 'Sign in to check out', 'Orders are linked to your account so you can track them and see your history.');
   const [profile, addresses] = user ? await Promise.all([
     db.from('profiles').select('full_name,email,phone').eq('id', user.id).single().catch(() => null),
     db.from('addresses').select('*').eq('user_id', user.id).order('is_default', { ascending: false }).catch(() => []),

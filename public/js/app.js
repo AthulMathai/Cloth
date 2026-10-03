@@ -25,6 +25,7 @@ const routes = [
   [/^\/orders(?:\/([A-Za-z0-9-]+))?\/?$/, () => import('./pages/order.js'), ['number']],
   [/^\/custom(?:\/([0-9a-f-]{36}))?\/?$/, () => import('./pages/custom.js'), ['id']],
   [/^\/designs\/?$/,                () => import('./pages/designs.js')],
+  [/^\/admin(?:\/(.*?))?\/?$/,       () => import('./admin/shell.js'), ['rest']],
   [/^\/(wishlist)(?:\/.*)?$/,       () => import('./pages/pending.js'), ['area']],
 ];
 
@@ -66,6 +67,7 @@ async function navigate(url, { push = true, initial = false } = {}) {
     document.title = page.title ? `${page.title} — ${storeName}` : storeName;
     setMeta('description', page.description || '');
     document.querySelector('link[rel="canonical"]')?.setAttribute('href', (env.SITE_URL || location.origin) + u.pathname);
+    document.body.classList.toggle('is-admin', u.pathname === '/admin' || u.pathname.startsWith('/admin/'));
     main.innerHTML = page.html;
     renderHeader(u.pathname);
     window.scrollTo(0, 0);

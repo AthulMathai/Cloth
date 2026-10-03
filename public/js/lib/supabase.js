@@ -69,9 +69,23 @@ class Query {
   catch(reject) { return this._exec().catch(reject); }
 }
 
+const matchParams = (match) => new URLSearchParams(Object.entries(match).map(([k, v]) => [k, `eq.${v}`]));
+
 export const db = {
   from: (table) => new Query(table),
   rpc: async (fn, args = {}) => (await request(`/rest/v1/rpc/${fn}`, { method: 'POST', body: args })).data,
+  // Writes (Row Level Security decides who may do what).
+  async insert(table, rows) {
+    return (await request(`/rest/v1/${table}?select=*`, { method: 'POST', body: rows, headers: { Prefer: 'return=representation' } })).data;
+  },
+  async update(table, match, patch) {
+    if (!Object.keys(match).length) throw new Error('update needs a filter');
+    return (await request(`/rest/v1/${table}?${matchParams(match)}&select=*`, { method: 'PATCH', body: patch, headers: { Prefer: 'return=representation' } })).data;
+  },
+  async remove(table, match) {
+    if (!Object.keys(match).length) throw new Error('remove needs a filter');
+    return (await request(`/rest/v1/${table}?${matchParams(match)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } })).data;
+  },
 };
 
 // ---- Auth (GoTrue) ------------------------------------------------------

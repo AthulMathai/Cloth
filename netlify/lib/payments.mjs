@@ -12,6 +12,9 @@ export function providerName() {
 
 const adapters = {
   mock: {
+    async refund({ amount_cents }) {
+      return { provider: 'mock', ref: 'mock_refund_' + crypto.randomUUID(), amount_cents, raw: { test: true } };
+    },
     async createPayment(order, { origin }) {
       return {
         provider: 'mock',
@@ -23,6 +26,19 @@ const adapters = {
   // Stripe Checkout via the REST API (no SDK needed). Card data never touches
   // our servers: the customer pays on Stripe's hosted page.
   stripe: {
+    async refund({ payment_ref, amount_cents, order_id, idempotency }) {
+      const key = process.env.STRIPE_SECRET_KEY;
+      if (!key) throw new Error('STRIPE_SECRET_KEY is not set');
+      if (!payment_ref?.startsWith('pi_')) throw new Error('This order has no Stripe payment to refund.');
+      const res = await fetch('https://api.stripe.com/v1/refunds', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/x-www-form-urlencoded', 'Idempotency-Key': idempotency },
+        body: new URLSearchParams({ payment_intent: payment_ref, amount: String(amount_cents), 'metadata[order_id]': order_id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(`Stripe: ${data?.error?.message || res.status}`);
+      return { provider: 'stripe', ref: data.id, amount_cents: data.amount, raw: { id: data.id, status: data.status } };
+    },
     async createPayment(order, { origin }) {
       const key = process.env.STRIPE_SECRET_KEY;
       if (!key) throw new Error('STRIPE_SECRET_KEY is not set');
@@ -54,6 +70,13 @@ const adapters = {
     },
   },
 };
+
+/** Adapter for an existing payment (refunds go back the way the money came). */
+export function adapterFor(provider) {
+  const a = adapters[(provider || '').toLowerCase()];
+  if (!a) throw new Error(`No refund adapter for payment provider "${provider}"`);
+  return a;
+}
 
 export function getAdapter() {
   const a = adapters[providerName()];

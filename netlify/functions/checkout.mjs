@@ -16,6 +16,7 @@ export default async (req) => {
   try { body = await readJson(req); } catch (e) { return fail(e.status || 400, e.message); }
 
   const user = await getUser(req);
+  if (!user) return fail(401, 'Sign in to check out.');
   const a = body.address || {};
   const address = {
     full_name: str(a.full_name, 120), line1: str(a.line1, 200), line2: str(a.line2, 200),

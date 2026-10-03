@@ -3,9 +3,10 @@ import { auth, db } from '../lib/supabase.js';
 import { themeForPage } from '../lib/store.js';
 import { esc } from '../components/ui.js';
 
-export async function load({ mode }) {
+export async function load({ mode }, query) {
   const theme = await themeForPage('account');
-  if (!auth.user || mode) return authForm(theme, mode === 'sign-up' ? 'sign-up' : 'sign-in');
+  const next = safeNext(query?.get('next'));
+  if (!auth.user || mode) return authForm(theme, mode === 'sign-up' ? 'sign-up' : 'sign-in', next);
 
   const [profile, roles] = await Promise.all([
     db.from('profiles').select('full_name,email,phone,marketing_opt_in').eq('id', auth.user.id).single().catch(() => null),
@@ -23,7 +24,7 @@ export async function load({ mode }) {
         <div class="form-row"><button class="btn" type="submit">Save changes</button><button class="btn btn--quiet" type="button" data-signout>Sign out</button></div>
         <p class="form-msg" role="status" data-msg></p>
       </form>
-      <nav class="chips"><a class="chip" href="/orders">Orders</a><a class="chip" href="/designs">Saved designs</a><a class="chip" href="/wishlist">Wishlist</a></nav>
+      <nav class="chips"><a class="chip" href="/orders">Orders</a><a class="chip" href="/designs">Saved designs</a><a class="chip" href="/wishlist">Wishlist</a>${roles.length ? '<a class="chip" href="/admin">Admin</a>' : ''}</nav>
     </div></section>`,
     mount(root) {
       const form = root.querySelector('[data-profile]'), msg = root.querySelector('[data-msg]');
@@ -44,7 +45,7 @@ export async function load({ mode }) {
   };
 }
 
-function authForm(theme, mode) {
+function authForm(theme, mode, next = null) {
   const up = mode === 'sign-up';
   return {
     theme, title: up ? 'Create an account' : 'Sign in',
@@ -55,7 +56,8 @@ function authForm(theme, mode) {
       <div class="field"><label for="password">Password</label><input id="password" name="password" type="password" minlength="8" autocomplete="${up ? 'new-password' : 'current-password'}" required></div>
       <button class="btn" type="submit">${up ? 'Create account' : 'Sign in'}</button>
       <p class="form-msg" role="status" data-msg></p>
-      <p class="muted" style="margin:0">${up ? 'Have an account? <a href="/account/sign-in">Sign in</a>' : 'New here? <a href="/account/sign-up">Create an account</a> · <button type="button" class="linklike" data-reset style="background:none;border:0;padding:0;text-decoration:underline;cursor:pointer">Forgot password</button>'}</p>
+      ${next ? `<p class="muted" style="margin:0">Sign in to continue — we'll take you straight back.</p>` : ''}
+      <p class="muted" style="margin:0">${up ? `Have an account? <a href="/account/sign-in${next ? '?next=' + encodeURIComponent(next) : ''}">Sign in</a>` : `New here? <a href="/account/sign-up${next ? '?next=' + encodeURIComponent(next) : ''}">Create an account</a> · <button type="button" class="linklike" data-reset style="background:none;border:0;padding:0;text-decoration:underline;cursor:pointer">Forgot password</button>`}</p>
     </form></section>`,
     mount(root) {
       const form = root.querySelector('[data-auth]'), msg = root.querySelector('[data-msg]');
@@ -69,7 +71,7 @@ function authForm(theme, mode) {
             const r = await auth.signUp(email, password, form.name.value.trim());
             if (!r.access_token) { msg.textContent = 'Check your email to confirm your account, then sign in.'; return; }
           } else await auth.signIn(email, password);
-          (await import('../app.js')).go('/account');
+          (await import('../app.js')).go(next || '/account');
         } catch (err) { msg.textContent = err.message; }
       };
       root.querySelector('[data-reset]')?.addEventListener('click', async () => {
@@ -79,4 +81,9 @@ function authForm(theme, mode) {
       });
     },
   };
+}
+
+// Only same-site paths (no "//evil.com", no schemes).
+function safeNext(n) {
+  return typeof n === 'string' && /^\/(?!\/)[^\s]*$/.test(n) && !n.startsWith('/account') ? n : null;
 }

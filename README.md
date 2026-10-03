@@ -8,13 +8,15 @@ print-on-demand clothing brand. Hosted on **Netlify**, backed by **Supabase**.
 | Phase | Area | State |
 |---|---|---|
 | 1 | Foundation: schema, roles & permissions, RLS, audit log, analytics events, auth, theme engine, storefront | **Built** |
-| 2 | Products & variants, categories, collections, product pages | **Built** (read side) |
+| 2 | Products & variants, categories, collections, product pages | **Built** (managed in admin) |
 | 2 | Cart, checkout, payments (mock + Stripe adapter), taxes, shipping, discounts | **Built** — see docs/checkout.md |
-| 3 | Custom designer + dynamic pricing engine, saved designs, quote requests | **Built** — see docs/custom-designer.md (admin pricing screens arrive with the admin panel) |
+| 3 | Custom designer + dynamic pricing engine, saved designs, quote requests | **Built** — see docs/custom-designer.md (pricing rules + calculator in admin) |
 | 3 | Real-time 3D garments, drag-on-garment, 3D mockups, live camera try-on | **Built** — three.js r180 vendored in `public/vendor/three` |
-| 4 | Orders, order history, customer tracking | **Partly built** (orders, append-only history, tracking page); fulfillment statuses arrive with Phase 7 |
+| 4 | Orders, order history, customer tracking | **Built** except shipping/tracking numbers (Phase 7) and order emails (needs an email provider) |
+| — | Admin control center (`/admin`): dashboard, orders (hold/cancel/refund/notes), products, variants, inventory, drops, categories/collections/themes, discounts, custom pricing + calculator, quotes, moderation queue, customers, shipping, taxes, users & roles, audit log | **Built** — see docs/admin.md |
+| — | Sign-in required to shop (bag + checkout) | **Built** |
 | 5 | Limited drops, numbering, sold-out → archive | **Built**, including purchase with reservation-safe numbering |
-| 6 | Moderation | **Partly built**: automated checks (file bytes, unsafe SVG, resolution, term list) gate the bag; human review queue is next |
+| 6 | Moderation | **Built**: automated checks + human review queue in admin. Provider OCR / image classification are plug-in slots |
 | 7–10 | Fulfillment & partner portal, CRM, analytics dashboards, AI | Planned |
 
 ## Run it locally

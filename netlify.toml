@@ -19,6 +19,11 @@
     Permissions-Policy = "camera=(self), microphone=(), geolocation=()"
 
 [[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
   for = "/vendor/*"
   [headers.values]
     Cache-Control = "public, max-age=604800"

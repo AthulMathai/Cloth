@@ -1,11 +1,13 @@
 // /cart — the bag.
 import { themeForPage, money } from '../lib/store.js';
-import { getBag, setLine, quote } from '../lib/cart.js';
+import { getBag, setLine, quote, signInUrl } from '../lib/cart.js';
+import { auth } from '../lib/supabase.js';
 import { storage } from '../lib/supabase.js';
 import { esc, garmentSVG } from '../components/ui.js';
 
 export async function load() {
   const theme = await themeForPage('account');
+  if (!auth.user) return signInPage(theme, 'Your bag', 'Sign in to see your bag', 'Your bag is saved to your account, so it follows you to any device.');
   return {
     theme, title: 'Your bag',
     html: `<section class="section commerce"><div class="wrap">
@@ -82,4 +84,11 @@ export async function load() {
       render();
     },
   };
+}
+
+export function signInPage(theme, title, heading, text) {
+  return { theme, title, html: `<section class="state"><h1>${esc(heading)}</h1>
+    <p class="lede">${esc(text)}</p>
+    <p class="hero-actions" style="justify-content:center"><a class="btn" href="${signInUrl()}">Sign in</a>
+      <a class="btn btn--quiet" href="/account/sign-up?next=${encodeURIComponent(location.pathname)}">Create an account</a></p></section>` };
 }

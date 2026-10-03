@@ -5,6 +5,14 @@ import { db, auth } from './supabase.js';
 import { track } from './analytics.js';
 
 const KEY = 'th8rty.bag';
+
+// Shoppers sign in before adding to the bag or checking out.
+export function signInUrl(next = location.pathname + location.search) {
+  return `/account/sign-in?next=${encodeURIComponent(next)}`;
+}
+function requireUser() {
+  if (!auth.user) throw Object.assign(new Error('Sign in to add items to your bag.'), { signIn: true });
+}
 let count = 0;
 
 export function cartToken() {
@@ -22,6 +30,7 @@ function emit(items) {
 export const bagCount = () => count;
 
 export async function getBag() {
+  if (!auth.user) { emit([]); return []; }
   const r = await db.rpc('cart_get', { p_token: cartToken() });
   if (r.token && !auth.user) saveToken(r.token);
   emit(r.items);
@@ -29,6 +38,7 @@ export async function getBag() {
 }
 
 export async function setItem(variantId, quantity, mode = 'set') {
+  if (quantity > 0) requireUser();
   const r = await db.rpc('cart_set_item', { p_token: cartToken(), p_variant_id: variantId, p_quantity: quantity, p_mode: mode });
   if (r.token) saveToken(r.token);
   emit(r.items);
@@ -49,6 +59,7 @@ export async function setLine(itemId, quantity) {
 }
 
 export async function addDesignToBag(designId, qty) {
+  requireUser();
   const r = await db.rpc('cart_add_design', { p_token: cartToken(), p_design_id: designId, p_quantity: qty });
   emit(r.items);
   return r.items;
