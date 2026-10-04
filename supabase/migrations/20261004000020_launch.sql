@@ -135,3 +135,10 @@ begin
 end $$;
 revoke execute on function public.admin_launch_mark(text, boolean) from public, anon;
 grant execute on function public.admin_launch_mark(text, boolean) to authenticated;
+
+-- Performance tidy-ups flagged by the Supabase advisor.
+alter policy "own generations" on public.ai_generations
+  using (user_id = (select auth.uid()) or public.has_permission('moderation.review') or public.has_permission('analytics.read'));
+create index if not exists ai_generations_asset on public.ai_generations (asset_id);
+create index if not exists ai_generations_used_asset on public.ai_generations (used_asset_id);
+create index if not exists promotions_created_by on public.promotions (created_by);
