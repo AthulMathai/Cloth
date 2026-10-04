@@ -27,7 +27,8 @@ const routes = [
   [/^\/designs\/?$/,                () => import('./pages/designs.js')],
   [/^\/admin(?:\/(.*?))?\/?$/,       () => import('./admin/shell.js'), ['rest']],
   [/^\/partner(?:\/(.*?))?\/?$/,     () => import('./partner/portal.js'), ['rest']],
-  [/^\/(wishlist)(?:\/.*)?$/,       () => import('./pages/pending.js'), ['area']],
+  [/^\/wishlist\/?$/,               () => import('./pages/wishlist.js')],
+  [/^\/support(?:\/([0-9a-f-]{36}))?\/?$/, () => import('./pages/support.js'), ['id']],
 ];
 
 const main = document.getElementById('main');
@@ -130,7 +131,7 @@ async function renderFooter() {
     <div><a class="wordmark" href="/">${storeName}</a><p class="muted" style="max-width:34ch">Drawn by hand, printed to order in Canada.</p></div>
     <div><h3>Shop</h3><ul>${categories.map(c => `<li><a href="/category/${c.slug}">${c.name}</a></li>`).join('')}</ul></div>
     <div><h3>Drops</h3><ul><li><a href="/drops">Current & upcoming</a></li><li><a href="/archive">Limited edition archive</a></li><li><a href="/custom">Custom designer</a></li></ul></div>
-    <div><h3>You</h3><ul><li><a href="/account">Account</a></li><li><a href="/orders">Orders</a></li><li><a href="/wishlist">Wishlist</a></li></ul></div>
+    <div><h3>You</h3><ul><li><a href="/account">Account</a></li><li><a href="/orders">Orders</a></li><li><a href="/wishlist">Wishlist</a></li><li><a href="/support">Help &amp; support</a></li></ul></div>
   </div>`;
 }
 

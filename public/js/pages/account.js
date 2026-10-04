@@ -8,9 +8,10 @@ export async function load({ mode }, query) {
   const next = safeNext(query?.get('next'));
   if (!auth.user || mode) return authForm(theme, mode === 'sign-up' ? 'sign-up' : 'sign-in', next);
 
-  const [profile, roles] = await Promise.all([
+  const [profile, roles, updates] = await Promise.all([
     db.from('profiles').select('full_name,email,phone,marketing_opt_in').eq('id', auth.user.id).single().catch(() => null),
     db.from('user_roles').select('role').eq('user_id', auth.user.id).catch(() => []),
+    db.rpc('my_notifications', { p_limit: 6 }).catch(() => []),
   ]);
   return {
     theme, title: 'Your account',
@@ -24,7 +25,10 @@ export async function load({ mode }, query) {
         <div class="form-row"><button class="btn" type="submit">Save changes</button><button class="btn btn--quiet" type="button" data-signout>Sign out</button></div>
         <p class="form-msg" role="status" data-msg></p>
       </form>
-      <nav class="chips"><a class="chip" href="/orders">Orders</a><a class="chip" href="/designs">Saved designs</a><a class="chip" href="/wishlist">Wishlist</a>${roles.length ? '<a class="chip" href="/admin">Admin</a>' : ''}</nav>
+      ${updates.length ? `<div class="panel-box"><h2 class="sub-head" style="margin-top:0">Updates</h2><ul class="sup-list">${updates.map(n => `<li class="${n.read ? '' : 'is-unread'}">
+          <a href="${n.ticket_id ? `/support/${n.ticket_id}` : n.order_number ? `/orders/${esc(n.order_number)}` : '#'}"><strong>${esc(n.title)}</strong></a>
+          ${n.body ? `<span class="muted small">${esc(n.body)}</span>` : ''}<span class="muted small">${new Date(n.at).toLocaleDateString('en-CA', { month: 'short', day: 'numeric' })}</span></li>`).join('')}</ul></div>` : ''}
+      <nav class="chips"><a class="chip" href="/orders">Orders</a><a class="chip" href="/designs">Saved designs</a><a class="chip" href="/wishlist">Wishlist</a><a class="chip" href="/support">Help &amp; support</a>${roles.length ? '<a class="chip" href="/admin">Admin</a>' : ''}</nav>
     </div></section>`,
     mount(root) {
       const form = root.querySelector('[data-profile]'), msg = root.querySelector('[data-msg]');

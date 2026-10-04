@@ -18,7 +18,8 @@ print-on-demand clothing brand. Hosted on **Netlify**, backed by **Supabase**.
 | 5 | Limited drops, numbering, sold-out → archive | **Built**, including purchase with reservation-safe numbering |
 | 6 | Moderation | **Built**: automated checks + human review queue in admin. Provider OCR / image classification are plug-in slots |
 | 7 | Fulfillment: partners, automatic routing, production orders, partner portal (`/partner`), partner blank stock, shipments + tracking, alerts, partner webhooks | **Built** — see docs/fulfillment.md. Five fictional test partners are seeded |
-| 8–10 | CRM, analytics dashboards, AI | Planned |
+| 8 | CRM: customer profiles with lifetime value, segments, tags, notes, activity; support desk + customer help pages; wishlist; abandoned bags | **Built** — see docs/crm.md |
+| 9–10 | Analytics dashboards, AI | Planned |
 
 ## Run it locally
 

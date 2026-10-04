@@ -2,6 +2,7 @@
 import { db } from '../lib/supabase.js';
 import { themeForPage, money, pad3, fmtDate } from '../lib/store.js';
 import { esc, garmentSVG } from '../components/ui.js';
+import { wishlistButtonHTML, bindWishlist } from '../lib/wishlist.js';
 
 export async function load({ slug }) {
   const d = await db.from('archive_drops').select('*').eq('slug', slug).single().catch(() => null);
@@ -26,6 +27,7 @@ export async function load({ slug }) {
         <h1 class="pdp-title">${esc(d.drop_name)}</h1>
         <p class="lede" style="margin:0">${esc(d.story || d.description || '')}</p>
         <div class="archived-lock"><strong>Archived</strong><span>No longer available</span></div>
+        <div class="wish-row">${wishlistButtonHTML('Save')}<span class="muted small">Keep it in your collection history</span></div>
         <dl class="specs">
           <dt>Piece</dt><dd>${esc(d.product_name)}</dd>
           <dt>Released</dt><dd>${fmtDate(d.release_at)}</dd>
@@ -39,5 +41,6 @@ export async function load({ slug }) {
         </dl>
         ${historical.length ? `<div class="grid">${historical.map(m => `<img src="${esc(m.url)}" alt="${esc(m.alt || '')}" loading="lazy">`).join('')}</div>` : ''}
       </div></div>`,
+    mount(root) { bindWishlist(root, { productId: d.product_id }); },
   };
 }

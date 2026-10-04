@@ -21,7 +21,9 @@ const NAV = [
   { group: 'Fulfillment', perm: 'fulfil', items: [
     ['Overview & alerts', '/admin/fulfillment'], ['Production queue', '/admin/fulfillment/production'], ['Partners', '/admin/fulfillment/partners'],
     ['Partner inventory', '/admin/fulfillment/stock'], ['Shipments', '/admin/fulfillment/shipments']] },
-  { group: 'Customers', perm: 'customers.read', items: [['Customers', '/admin/customers']] },
+  { group: 'Customers', perm: 'customers.read', items: [
+    ['All customers', '/admin/customers'], ['High value', '/admin/customers?segment=high_value'], ['Inactive', '/admin/customers?segment=inactive'],
+    ['Custom-design customers', '/admin/customers?segment=custom_design'], ['Abandoned bags', '/admin/customers/abandoned'], ['Support', '/admin/support']] },
   { group: 'Marketing', perm: 'marketing.write', items: [['Discounts', '/admin/discounts'], ['Promotions', '/admin/promotions']] },
   { group: 'Settings', perm: 'staff', items: [
     ['Shipping', '/admin/shipping', 'settings.write'], ['Taxes', '/admin/taxes', 'settings.write'], ['Store', '/admin/store', 'settings.write'],
@@ -39,6 +41,7 @@ const MODULES = {
   designs: () => import('./moderation.js'),
   pricing: () => import('./pricing.js'),
   customers: () => import('./customers.js'),
+  support: () => import('./support.js'),
   users: () => import('./users.js'),
   audit: () => import('./audit.js'),
   categories: () => import('./crud.js'), collections: () => import('./crud.js'), designers: () => import('./crud.js'),

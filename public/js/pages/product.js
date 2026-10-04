@@ -4,6 +4,7 @@ import { categoryById, themeForCategory, money, pad3, fmtDate } from '../lib/sto
 import { esc, garmentSVG, calloutSVG, priceHTML, startCountdowns } from '../components/ui.js';
 import { track } from '../lib/analytics.js';
 import { addToBag, signInUrl } from '../lib/cart.js';
+import { wishlistButtonHTML, bindWishlist } from '../lib/wishlist.js';
 
 export async function load({ slug }) {
   const p = await db.from('storefront_products').select('*').eq('slug', slug).single().catch(() => null);
@@ -54,6 +55,7 @@ export async function load({ slug }) {
         <div class="drop-count">${p.units_sold} / ${p.edition_size} claimed · ${p.units_remaining} left · each piece individually numbered</div></div>` : ''}
       <p class="lede" style="margin:0">${esc(p.description || '')}</p>
       ${buyBox}
+      <div class="wish-row">${wishlistButtonHTML()}</div>
       <dl class="specs">
         ${p.materials ? `<dt>Fabric</dt><dd>${esc(p.materials)}</dd>` : ''}
         ${p.designer_name ? `<dt>Designer</dt><dd>${esc(p.designer_name)}</dd>` : ''}
@@ -67,6 +69,7 @@ export async function load({ slug }) {
     entity: { type: 'product', id: p.id },
     mount(root) {
       track(p.is_limited ? 'limited_drop_viewed' : 'product_view', { entity_type: 'product', entity_id: p.id });
+      bindWishlist(root, { productId: p.id });
       const stop = startCountdowns(root);
       const sizesEl = root.querySelector('[data-sizes]');
       if (!sizesEl) return stop;

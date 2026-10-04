@@ -96,6 +96,7 @@ export async function load({ number }, query) {
           <address>${esc(a.full_name)}<br>${esc(a.line1)}${a.line2 ? '<br>' + esc(a.line2) : ''}<br>${esc(a.city)}, ${esc(a.province)} ${esc(a.postal_code)}</address>
           ${o.shipping_rate ? `<p class="muted small">Estimated ${o.shipping_rate.min_days}–${o.shipping_rate.max_days} business days after it ships. ${(o.shipments || []).length ? '' : "Tracking appears here once it's on its way."}</p>` : ''}
           ${o.payment_provider === 'mock' ? '<p class="test-flag small">Paid with the development test provider — no real charge.</p>' : ''}
+          <p class="small"><a href="/support?order=${encodeURIComponent(o.number)}">Need help with this order?</a></p>
         </aside>
       </div>
     </div></section>`,

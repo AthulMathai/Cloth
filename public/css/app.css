@@ -764,3 +764,28 @@ html.tryon-open { overflow: hidden; }
 .bag-thumb img { width: 100%; height: 100%; object-fit: cover; }
 
 [data-buttons] .dz-add .btn:not(.btn--quiet), .dz-add .btn { font-size: 16px; letter-spacing: .03em; padding-inline: 10px; }
+
+/* ---- Wishlist ---- */
+.wish-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 4px 0 16px; }
+.wish-btn { gap: 8px; }
+.wish-btn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.wish-heart { font-size: 1.15em; line-height: 1; }
+.wish-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.wish-card .card-body { display: grid; gap: 6px; justify-items: start; }
+.wish-card .status-pill { font-size: 12px; padding: 3px 9px; }
+.wish-chip { display: inline-flex; gap: 6px; align-items: center; }
+.link-btn { background: none; border: 0; padding: 0 2px; font: inherit; color: inherit; cursor: pointer; font-size: 18px; line-height: 1; }
+
+/* ---- Support ---- */
+.sup-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.sup-list li { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.sup-list li:last-child { border-bottom: 0; padding-bottom: 0; }
+.sup-list li.is-unread strong::before { content: '● '; color: var(--accent); }
+.sup-list .status-pill { font-size: 12px; padding: 2px 8px; }
+.sup-thread { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.sup-bubble { max-width: 85%; padding: 12px 16px; border: 2px solid var(--line); background: var(--bg); display: grid; gap: 4px; }
+.sup-bubble p { margin: 0; }
+.sup-bubble.is-me { justify-self: end; border-color: var(--fg); }
+.sup-bubble.is-them { justify-self: start; border-color: var(--accent); }
+.sup-bubble.is-system { justify-self: center; border-style: dashed; font-size: 14px; }
+.field textarea { width: 100%; min-height: 110px; padding: 10px 14px; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 92%, var(--fg)); color: var(--fg); font: inherit; resize: vertical; }

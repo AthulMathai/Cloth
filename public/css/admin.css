@@ -307,3 +307,34 @@ pre.cc-mono { white-space: pre-wrap; max-height: 260px; overflow: auto; backgrou
   .pp-card { flex-wrap: wrap; }
   .pp-quick { flex: 1 1 100%; }
 }
+
+/* ---- CRM + support ---- */
+.crm-count { font-size: 12px; opacity: .65; margin-left: 2px; }
+.crm-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.crm-filters input { flex: 1 1 260px; }
+.crm-rules summary { cursor: pointer; }
+.crm-rules ul { margin: 10px 0; padding-left: 18px; display: grid; gap: 4px; }
+.crm-settings { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; align-items: end; }
+.crm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.crm-list li { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.crm-activity { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 360px; overflow: auto; font-size: 14px; }
+.crm-activity li { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed var(--ad-line); padding-bottom: 5px; }
+.crm-notes { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.crm-notes li { background: #fffbea; border: 1px solid #f1e3a6; border-radius: 8px; padding: 8px 10px; }
+.crm-notes p { margin: 0 0 4px; white-space: pre-wrap; }
+.crm-note-form { display: grid; gap: 6px; justify-items: start; }
+.crm-note-form textarea { width: 100%; }
+.crm-addr { font-style: normal; margin-bottom: 10px; line-height: 1.45; }
+.sup-thread { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.sup-msg { border: 1px solid var(--ad-line); border-radius: 10px; padding: 10px 14px; max-width: 88%; }
+.sup-msg p { margin: 6px 0 0; white-space: normal; }
+.sup-msg--customer { background: #fff; justify-self: start; }
+.sup-msg--staff { background: #eef3fd; border-color: #cbd9f5; justify-self: end; }
+.sup-msg--system { background: transparent; border-style: dashed; justify-self: center; font-size: 13px; color: var(--ad-muted); }
+.sup-msg.is-internal { background: #fffbea; border-color: #f1e3a6; }
+.sup-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sup-reply { display: grid; gap: 10px; }
+.sup-reply textarea { width: 100%; }
+.sup-reply.is-internal textarea { background: #fffbea; }
+.sup-mode { gap: 14px; }
+.sup-mode label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; cursor: pointer; }

@@ -2,6 +2,7 @@
 import { db } from '../lib/supabase.js';
 import { categoryById, themeForCategory, themeForSlug, loadBoot } from '../lib/store.js';
 import { categoryHero, productGrid } from '../components/ui.js';
+import { wishlistButtonHTML, bindWishlist } from '../lib/wishlist.js';
 
 export async function load({ slug }) {
   const coll = await db.from('collections').select('*').eq('slug', slug).single().catch(() => null);
@@ -18,6 +19,7 @@ export async function load({ slug }) {
     theme, title: coll.seo?.title || coll.name, description: coll.seo?.description || coll.description,
     entity: { type: 'collection', id: coll.id },
     html: `${categoryHero({ name: coll.name, tagline: cat?.name || '', description: coll.description }, theme.config)}
-      <section class="section" style="padding-top:24px"><div class="wrap">${productGrid(products, theme.config.cards.style)}</div></section>`,
+      <section class="section" style="padding-top:24px"><div class="wrap"><div class="wish-row">${wishlistButtonHTML('Save collection')}</div>${productGrid(products, theme.config.cards.style)}</div></section>`,
+    mount(root) { bindWishlist(root, { collectionId: coll.id }); },
   };
 }
