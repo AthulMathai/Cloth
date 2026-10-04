@@ -434,3 +434,26 @@ pre.cc-mono { white-space: pre-wrap; max-height: 260px; overflow: auto; backgrou
 .em-types .cc-check > span { flex: 1; }
 .promo-ex { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; max-width: 520px; }
 .promo-ex li { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--ad-line, #e4e2dc); padding-bottom: 6px; font-size: 14px; }
+
+/* Launch checklist */
+.ln-progress { height: 8px; background: var(--ad-mute-bg); border-radius: 999px; overflow: hidden; margin: 0 0 16px; }
+.ln-progress span { display: block; height: 100%; background: var(--ad-good, #1b7a46); }
+.ln-group h2 { margin-bottom: 6px; }
+.ln-list { list-style: none; margin: 0; padding: 0; }
+.ln-item { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px 0; border-top: 1px solid var(--ad-line, #e4e2dc); }
+.ln-item:first-child { border-top: 0; }
+.ln-item p { margin: 3px 0 0; }
+.ln-mark { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 700 13px/1 system-ui; border: 2px solid #c9c6bd; color: #fff; }
+.ln-item.is-ok .ln-mark { background: var(--ad-good, #1b7a46); border-color: var(--ad-good, #1b7a46); }
+.ln-item.is-todo .ln-mark { background: var(--ad-bad); border-color: var(--ad-bad); }
+.ln-item.is-warn .ln-mark { background: #b07a0a; border-color: #b07a0a; }
+.ln-item.is-unknown .ln-mark { color: #6b665e; }
+.ln-act { display: flex; gap: 12px; align-items: center; }
+.lg-two { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+.lg-form { display: grid; gap: 14px; }
+.lg-form textarea { font: 14px/1.5 ui-monospace, Menlo, monospace; }
+.lg-form .cc-btn { justify-self: start; }
+.lg-preview .legal-body { font-size: 15px; line-height: 1.6; }
+.lg-preview .legal-body h2 { font-size: 17px; margin: 18px 0 6px; }
+.md-todo { background: #ffd84d; color: #1d1a00; padding: 0 3px; border-radius: 2px; }
+@media (max-width: 1000px) { .lg-two { grid-template-columns: 1fr; } .ln-item { grid-template-columns: 28px 1fr; } .ln-act { grid-column: 2; } }

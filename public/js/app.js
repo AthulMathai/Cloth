@@ -29,6 +29,7 @@ const routes = [
   [/^\/partner(?:\/(.*?))?\/?$/,     () => import('./partner/portal.js'), ['rest']],
   [/^\/wishlist\/?$/,               () => import('./pages/wishlist.js')],
   [/^\/support(?:\/([0-9a-f-]{36}))?\/?$/, () => import('./pages/support.js'), ['id']],
+  [/^\/legal\/([a-z-]+)\/?$/,       () => import('./pages/legal.js'), ['slug']],
 ];
 
 const main = document.getElementById('main');
@@ -136,7 +137,8 @@ async function renderFooter() {
     <div><h3>Shop</h3><ul>${categories.map(c => `<li><a href="/category/${c.slug}">${c.name}</a></li>`).join('')}</ul></div>
     <div><h3>Drops</h3><ul><li><a href="/drops">Current & upcoming</a></li><li><a href="/archive">Limited edition archive</a></li><li><a href="/custom">Custom designer</a></li></ul></div>
     <div><h3>You</h3><ul><li><a href="/account">Account</a></li><li><a href="/orders">Orders</a></li><li><a href="/wishlist">Wishlist</a></li><li><a href="/support">Help &amp; support</a></li></ul></div>
-  </div>`;
+  </div>
+  <nav class="footer-legal" aria-label="Policies"><a href="/legal/shipping">Shipping</a><a href="/legal/returns">Returns &amp; refunds</a><a href="/legal/privacy">Privacy</a><a href="/legal/terms">Terms of sale</a></nav>`;
 }
 
 // Promotion strip (Admin → Marketing → Promotions). Hidden in the admin and

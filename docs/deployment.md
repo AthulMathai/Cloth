@@ -41,4 +41,4 @@
 
 - Verify current Canadian GST/HST/PST/QST rates when the tax tables land.
 - Replace mock adapters with real providers and set `INTEGRATIONS_MODE=live`.
-- Add the SEO edge function + sitemap (see architecture.md).
+- Work through Admin → Settings → Launch checklist (docs/launch.md).

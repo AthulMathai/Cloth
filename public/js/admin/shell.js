@@ -31,7 +31,7 @@ const NAV = [
   { group: 'Marketing', perm: 'marketing.write', items: [['Discounts', '/admin/discounts'], ['Promotions', '/admin/promotions']] },
   { group: 'Settings', perm: 'staff', items: [
     ['Shipping', '/admin/shipping', 'settings.write'], ['Taxes', '/admin/taxes', 'settings.write'], ['Store', '/admin/store', 'settings.write'],
-    ['Themes', '/admin/themes', 'catalog.write'],
+    ['Themes', '/admin/themes', 'catalog.write'], ['Launch checklist', '/admin/launch', 'settings.write'],
     ['Users & roles', '/admin/users', 'users.manage'], ['Audit log', '/admin/audit', 'audit.read']] },
 ];
 
@@ -49,6 +49,7 @@ const MODULES = {
   analytics: () => import('./analytics.js'),
   ai: () => import('./ai.js'),
   emails: () => import('./emails.js'),
+  launch: () => import('./launch.js'),
   users: () => import('./users.js'),
   audit: () => import('./audit.js'),
   categories: () => import('./crud.js'), collections: () => import('./crud.js'), designers: () => import('./crud.js'),

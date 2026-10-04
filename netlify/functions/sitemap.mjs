@@ -6,7 +6,8 @@ const xmlEsc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<':
 
 export default async (req) => {
   const site = (process.env.SITE_URL || process.env.URL || new URL(req.url).origin).replace(/\/$/, '');
-  const urls = [['/', null, '1.0'], ['/shop', null, '0.9'], ['/drops', null, '0.8'], ['/custom', null, '0.8'], ['/archive', null, '0.6']];
+  const urls = [['/', null, '1.0'], ['/shop', null, '0.9'], ['/drops', null, '0.8'], ['/custom', null, '0.8'], ['/archive', null, '0.6'],
+    ...['shipping', 'returns', 'privacy', 'terms'].map(k => [`/legal/${k}`, null, '0.3'])];
   if (configured()) {
     const [cats, cols, prods, drops] = await Promise.all([
       rest('categories?is_visible=eq.true&select=slug,updated_at'),

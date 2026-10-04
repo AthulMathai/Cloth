@@ -73,6 +73,10 @@ export default async (request, context) => {
           potentialAction: { '@type': 'SearchAction', target: `${site}/search?q={search_term_string}`, 'query-input': 'required name=search_term_string' } }] };
     }
     if (PRIVATE.test(path)) return { ...base, noindex: true };
+    if ((mm = path.match(/^\/legal\/(privacy|returns|shipping|terms)$/))) {
+      const [row] = await db(`store_settings?key=eq.legal.${mm[1]}&select=value`);
+      return row ? { ...base, title: row.value.title, description: `${row.value.title} — ${store}.` } : { ...base, notFound: true };
+    }
     if (STATIC[path]) return { ...base, ...STATIC[path], noindex: path === '/search' };
     if ((mm = path.match(/^\/product\/([a-z0-9-]+)$/))) {
       const [p] = await db(`storefront_products?slug=eq.${mm[1]}&select=id,slug,name,description,product_type,price_cents,base_price_cents,status,is_purchasable,stock_available,media,colors,category_name,category_slug,collection_name,collection_slug,designer_name,drop_number,drop_slug,units_remaining,seo,release_at,promo_ends_at&status=neq.draft`);
