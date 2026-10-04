@@ -33,8 +33,10 @@ upload their own artwork.
 
 ### Turning it on
 
-1. Cloudflare dashboard → **AI** → Workers AI → note your **Account ID**.
-2. My Profile → API Tokens → **Create token** with the *Workers AI* (Read) permission.
+1. Sign up (free) at dash.cloudflare.com and open **AI → Workers AI**.
+2. Choose **Use REST API** → **Create a Workers AI API Token** → **Create API Token** →
+   **Copy API Token** (shown only once). Copy the **Account ID** from the same page.
+   (A custom token needs *Workers AI – Read* and *Workers AI – Edit*.)
 3. Netlify → Site configuration → Environment variables: add
    `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_AI_TOKEN`, then redeploy.
 4. Within the hour `scheduled-ai` re-indexes every product with the real
