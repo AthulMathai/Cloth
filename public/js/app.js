@@ -72,6 +72,7 @@ async function navigate(url, { push = true, initial = false } = {}) {
     document.body.classList.toggle('is-admin', /^\/(admin|partner)(\/|$)/.test(u.pathname));
     main.innerHTML = page.html;
     renderHeader(u.pathname);
+    if (promo !== null) renderPromoBanner().catch(() => {});
     window.scrollTo(0, 0);
     const c = page.mount?.(main);
     cleanup = typeof c === 'function' ? c : null;
@@ -135,6 +136,33 @@ async function renderFooter() {
   </div>`;
 }
 
+// Promotion strip (Admin → Marketing → Promotions). Hidden in the admin and
+// partner portal, dismissible for the visit, and removed when the sale ends.
+let promo = null, promoTimer = 0;
+async function renderPromoBanner() {
+  promo ??= await db.rpc('promo_banner').catch(() => null);
+  const host = document.getElementById('promo-banner');
+  clearInterval(promoTimer);
+  let dismissed = null; try { dismissed = sessionStorage.getItem('th8rty.promo.hide'); } catch {}
+  if (!promo || dismissed === promo.id || /^\/(admin|partner)/.test(location.pathname) || (promo.ends_at && new Date(promo.ends_at) <= Date.now())) { host.innerHTML = ''; return; }
+  const off = promo.kind === 'percent' ? `${+promo.value}% off` : `$${(promo.value / 100).toFixed(promo.value % 100 ? 2 : 0)} off`;
+  const text = promo.text || `${promo.label || promo.name} — ${off}${promo.scope === 'all' ? ' everything' : ''}`;
+  host.innerHTML = `<div class="promo-banner" role="region" aria-label="Sale">
+    <a href="${promo.href || '/shop'}"><strong>${text.replace(/[<>&]/g, '')}</strong>${promo.ends_at ? ` <span class="promo-time">· ends in <span data-promo-left></span></span>` : ''} <span aria-hidden="true">→</span></a>
+    <button class="promo-x" aria-label="Hide sale banner">×</button></div>`;
+  host.querySelector('.promo-x').onclick = () => { try { sessionStorage.setItem('th8rty.promo.hide', promo.id); } catch {} host.innerHTML = ''; clearInterval(promoTimer); };
+  const left = host.querySelector('[data-promo-left]');
+  if (left) {
+    const tick = () => {
+      const ms = new Date(promo.ends_at) - Date.now();
+      if (ms <= 0) { host.innerHTML = ''; clearInterval(promoTimer); return; }
+      const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, m = Math.floor(ms / 6e4) % 60, s = Math.floor(ms / 1e3) % 60;
+      left.textContent = `${d ? d + 'd ' : ''}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    };
+    tick(); promoTimer = setInterval(tick, 1000);
+  }
+}
+
 // ---------------------------------------------------------------------
 // Boot
 // ---------------------------------------------------------------------
@@ -171,4 +199,5 @@ export function go(url) { return navigate(url); }
   document.addEventListener('bag:change', () => renderHeader(location.pathname));
   getBag().catch(() => {});
   await navigate(location.href, { initial: true });
+  renderPromoBanner().catch(() => {});
 })();

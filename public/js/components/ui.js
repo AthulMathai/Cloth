@@ -8,8 +8,10 @@ export { esc };
 const firstColor = (p) => p.colors?.[0]?.hex || '#141414';
 
 export function priceHTML(p) {
-  return p.sale_price_cents != null
-    ? `${money(p.sale_price_cents)}<s>${money(p.base_price_cents)}</s>`
+  // price_cents already includes the product's own sale price and any running promotion
+  const now = p.price_cents ?? p.sale_price_cents ?? p.base_price_cents;
+  return now < p.base_price_cents
+    ? `${money(now)}<s><span class="sr-only">was </span>${money(p.base_price_cents)}</s>`
     : money(p.base_price_cents);
 }
 
@@ -19,6 +21,7 @@ export function statusBadge(p) {
   if (p.status === 'out_of_stock') return '<span class="badge">Out of stock</span>';
   if (p.status === 'scheduled') return '<span class="badge badge--accent">Coming soon</span>';
   if (p.drop_number) return `<span class="badge badge--accent">Drop ${pad3(p.drop_number)}</span>`;
+  if (p.promo_label) return `<span class="badge badge--accent">${esc(p.promo_label)}</span>`;
   if (p.sale_price_cents != null) return '<span class="badge badge--accent">Sale</span>';
   return '';
 }
@@ -72,7 +75,7 @@ export function startCountdowns(root) {
   const tick = () => {
     for (const el of els) {
       const ms = new Date(el.dataset.countdown) - Date.now();
-      if (ms <= 0) { el.textContent = 'Live now'; continue; }
+      if (ms <= 0) { el.textContent = el.dataset.ended || 'Live now'; continue; }
       const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, m = Math.floor(ms / 6e4) % 60, s = Math.floor(ms / 1e3) % 60;
       el.textContent = `${d ? d + 'd ' : ''}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     }

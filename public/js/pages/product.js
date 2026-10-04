@@ -13,9 +13,10 @@ export async function load({ slug }) {
   // Archived drops live at their archive URL; never show a buy box for them.
   if (p.status === 'archived' && p.drop_slug) return (await import('./archive-drop.js')).load({ slug: p.drop_slug });
 
-  const [cat, variants] = await Promise.all([
+  const [cat, variants, prices] = await Promise.all([
     categoryById(p.category_id),
     db.from('product_variants').select('id,sku,size,color,color_hex,price_cents,sale_price_cents,inventory_on_hand,inventory_reserved,sort_order').eq('product_id', p.id).eq('is_active', true).order('sort_order'),
+    db.rpc('variant_prices', { p_product_id: p.id }).catch(() => ({})),   // exact prices incl. any running promotion
   ]);
   const theme = await themeForCategory(cat);
   const sketch = theme.config.cards.style === 'sketch-callout';
@@ -52,6 +53,7 @@ export async function load({ slug }) {
       ${p.drop_number ? `<div class="drop-no">DROP ${pad3(p.drop_number)} · ${esc(p.drop_name)}</div>` : ''}
       <h1 class="pdp-title">${esc(p.name)}</h1>
       <div class="pdp-price">${priceHTML(p)}</div>
+      ${p.promo_label ? `<p class="pdp-promo"><span class="badge badge--accent">${esc(p.promo_label)}</span>${p.promo_ends_at ? ` <span class="muted">ends in <span data-countdown="${esc(p.promo_ends_at)}"></span></span>` : ''}</p>` : ''}
       ${p.drop_id && !upcoming ? `<div><div class="meter"><span style="width:${(p.units_sold / p.edition_size) * 100}%"></span></div>
         <div class="drop-count">${p.units_sold} / ${p.edition_size} claimed · ${p.units_remaining} left · each piece individually numbered</div></div>` : ''}
       <p class="lede" style="margin:0">${esc(p.description || '')}</p>
@@ -90,7 +92,7 @@ export async function load({ slug }) {
         const avail = v ? v.inventory_on_hand - v.inventory_reserved : 0;
         stockMsg.textContent = !v ? 'Pick a size.' : avail <= 0 ? 'Out of stock in this size.' : avail <= 5 ? `Only ${avail} left in ${v.size}.` : 'In stock.';
         add.disabled = !v || avail <= 0 || !p.is_purchasable;
-        add.textContent = v ? `Add to bag · ${money(v.sale_price_cents ?? v.price_cents ?? p.price_cents)}` : 'Add to bag';
+        add.textContent = v ? `Add to bag · ${money(prices?.[v.id] ?? v.sale_price_cents ?? v.price_cents ?? p.price_cents)}` : 'Add to bag';
         add.onclick = async () => {
           if (!v) return;
           const added = root.querySelector('[data-added]');

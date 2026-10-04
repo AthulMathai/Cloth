@@ -46,6 +46,14 @@ const seoIn = (r) => ({ ...r, seo_title: r.seo?.title || '', seo_description: r.
 const seoOut = (v) => { v.seo = { ...(v.seo_title ? { title: v.seo_title } : {}), ...(v.seo_description ? { description: v.seo_description } : {}) }; delete v.seo_title; delete v.seo_description; return v; };
 const checkSlug = (v) => { v.slug ||= slugify(v.name); if (!slugRe.test(v.slug)) throw new Error('Slug: lowercase letters, numbers and dashes only.'); return v; };
 
+function promoStatus(r) {
+  const now = Date.now();
+  if (!r.is_active) return pill('draft', 'Off');
+  if (r.ends_at && new Date(r.ends_at) <= now) return pill('expired', 'Ended');
+  if (new Date(r.starts_at) > now) return pill('scheduled', 'Scheduled');
+  return pill('active', 'Live');
+}
+
 const CONFIG = {
   categories: {
     title: 'Categories', one: 'category', perm: 'catalog.write', order: 'sort_order',
@@ -132,6 +140,44 @@ const CONFIG = {
     defaults: { kind: 'percent', scope: 'all', is_active: true, exclude_limited: false, min_subtotal_cents: 0 },
     note: 'Codes are never listed publicly; customers type them at checkout. Every change is in the audit log.',
   },
+  promotions: {
+    title: 'Promotions', one: 'promotion', perm: 'marketing.write', order: 'starts_at', desc: true,
+    lookups: async () => ({ categories: await db.from('categories').select('id,name').order('sort_order'),
+      collections: await db.from('collections').select('id,name').order('name'), products: await db.from('products').select('id,name').neq('status', 'draft').order('name') }),
+    columns: (L) => [{ label: 'Promotion', render: r => `<strong>${esc(r.name)}</strong>${r.label ? ` <span class="cc-tag">${esc(r.label)}</span>` : ''}` },
+      { label: 'Discount', render: r => r.kind === 'percent' ? `${+r.value}% off` : `${money(r.value)} off each` },
+      { label: 'Applies to', render: r => r.scope === 'all' ? `Everything${r.include_limited ? '' : ' (not limited drops)'}`
+          : esc((L[r.scope] || []).filter(x => (r.scope_ids || []).includes(x.id)).map(x => x.name).slice(0, 3).join(', ') + ((r.scope_ids || []).length > 3 ? ` +${r.scope_ids.length - 3}` : '')) },
+      { label: 'When', render: r => `${date(r.starts_at)} → ${r.ends_at ? date(r.ends_at) : 'no end'}` },
+      { label: 'Status', render: r => promoStatus(r) }],
+    fields: (L) => [{ name: 'name', label: 'Name', required: true, help: 'e.g. Fall sale. Shown on the banner unless you write banner text.' },
+      { name: 'label', label: 'Badge on product cards', help: 'Short, e.g. “Fall sale” or “-20%”. Defaults to the name.' },
+      { name: 'kind', label: 'Discount', type: 'select', required: true, options: [['percent', 'Percent off'], ['fixed', 'Dollar amount off each item']] },
+      { name: 'value', label: 'Amount', type: 'number', min: 0, required: true, help: 'Percent (up to 90) or dollars.' },
+      { name: 'scope', label: 'Applies to', type: 'select', options: [['all', 'Everything'], ['collections', 'Selected collections'], ['categories', 'Selected categories'], ['products', 'Selected products']] },
+      { name: 'scope_pick', label: 'Selected items', type: 'multi', full: true, help: 'Used when “Applies to” isn’t Everything.',
+        groups: { products: L.products, categories: L.categories, collections: L.collections } },
+      { name: 'starts_at', label: 'Starts', type: 'datetime', help: 'Empty = now.' }, { name: 'ends_at', label: 'Ends', type: 'datetime', help: 'Empty = until you turn it off.' },
+      { name: 'banner_text', label: 'Banner text (optional)', full: true, help: 'e.g. “Fall sale: 20% off all hoodies”. Defaults to name + discount.' },
+      { name: 'show_banner', label: 'Show a banner across the store', type: 'checkbox' }, { name: 'show_countdown', label: 'Show a countdown to the end', type: 'checkbox' },
+      { name: 'include_limited', label: 'Include limited drops', type: 'checkbox' }, { name: 'is_active', label: 'On', type: 'checkbox' },
+      { name: 'priority', label: 'Priority', type: 'number', step: 1, help: 'When two promotions give the same saving, the higher priority wins.' }],
+    load: (r) => ({ ...r, value: r.kind === 'fixed' ? Number(r.value) / 100 : Number(r.value), scope_pick: r.scope_ids || [] }),
+    save: (v) => {
+      if (v.kind === 'percent' && !(v.value > 0 && v.value <= 90)) throw new Error('Percent must be between 1 and 90.');
+      if (v.kind === 'fixed') { if (!(v.value > 0)) throw new Error('Enter the dollar amount.'); v.value = Math.round(v.value * 100); }
+      v.scope_ids = v.scope === 'all' ? [] : (v.scope_pick || []);
+      if (v.scope !== 'all' && !v.scope_ids.length) throw new Error('Pick at least one item for this promotion.');
+      delete v.scope_pick;
+      v.starts_at ||= new Date().toISOString();
+      if (v.ends_at && new Date(v.ends_at) <= new Date(v.starts_at)) throw new Error('The end must be after the start.');
+      v.label ||= null; v.banner_text ||= null; v.priority ??= 0;
+      return v;
+    },
+    defaults: { kind: 'percent', scope: 'all', is_active: true, show_banner: true, show_countdown: true, include_limited: false, priority: 0 },
+    note: 'Promotions lower prices automatically — no code needed. If several apply, the customer gets the single biggest saving (never stacked); a product’s own sale price wins if it is lower. Discount codes still work on top at checkout. Prices in carts update right away; paid orders keep the price paid.',
+    preview: true,
+  },
   shipping: {
     title: 'Shipping rates', one: 'shipping rate', perm: 'settings.write', table: 'shipping_rates', order: 'sort_order',
     lookups: async () => ({ zones: await db.from('shipping_zones').select('id,name,provinces').order('name') }),
@@ -201,11 +247,13 @@ export async function view(ctx) {
       html: `<p class="cc-crumbs"><a href="/admin/${key}">${esc(cfg.title)}</a> / ${isNew ? 'New' : esc(row.name || row.code || row.label || row.key || '')}</p>
         <header class="cc-head"><h1>${isNew ? `New ${esc(cfg.one)}` : esc(row.name || row.code || row.label || row.key)}</h1></header>
         ${cfg.note ? `<p class="cc-note">${esc(cfg.note)}</p>` : ''}
-        <section class="cc-card">${canWrite ? formWithMulti(fields, values) : '<p class="cc-empty">You can view but not edit this.</p>'}</section>`,
+        <section class="cc-card">${canWrite ? formWithMulti(fields, values) : '<p class="cc-empty">You can view but not edit this.</p>'}</section>
+        ${cfg.preview && canWrite ? '<section class="cc-card" data-promo-preview aria-live="polite"><h2>What changes</h2><p class="cc-muted">Fill in the discount to see the prices it changes.</p></section>' : ''}`,
       mount(root) {
         bindColorMirrors(root);
         bindMulti(root);
         const f = root.querySelector('[data-form]'); if (!f) return;
+        if (cfg.preview) bindPromoPreview(root, f);
         f.onsubmit = async (e) => {
           e.preventDefault();
           const msg = f.querySelector('[data-msg]');
@@ -253,3 +301,23 @@ function bindMulti(root) {
 }
 
 export { CONFIG, confirmDialog };
+
+// Live "what changes" box for promotions: how many products and example prices.
+function bindPromoPreview(root, f) {
+  const box = root.querySelector('[data-promo-preview]'); if (!box) return;
+  let t = 0;
+  const run = async () => {
+    const kind = f.elements.kind.value, raw = Number(f.elements.value.value), scope = f.elements.scope.value;
+    const ids = [...f.querySelectorAll('[data-multi="scope_pick"] input:checked')].filter(i => i.closest('[data-group]').dataset.group === scope).map(i => i.value);
+    if (!(raw > 0) || (scope !== 'all' && !ids.length)) { box.innerHTML = '<h2>What changes</h2><p class="cc-muted">Fill in the discount to see the prices it changes.</p>'; return; }
+    try {
+      const d = await db.rpc('admin_promo_preview', { p_kind: kind, p_value: kind === 'fixed' ? Math.round(raw * 100) : raw, p_scope: scope, p_scope_ids: ids,
+        p_include_limited: f.elements.include_limited.checked });
+      box.innerHTML = `<h2>What changes</h2><p><strong>${d.lowered}</strong> of ${d.products} products get a lower price${d.already_lower ? ` · ${d.already_lower} already cost less (own sale price)` : ''}.</p>
+        ${d.examples.length ? `<ul class="promo-ex">${d.examples.slice(0, 8).map(x => `<li><span>${esc(x.name)}</span><span><s class="cc-muted">${money(x.was)}</s> <strong>${money(x.now)}</strong></span></li>`).join('')}</ul>` : ''}`;
+    } catch (e) { box.innerHTML = `<h2>What changes</h2><p class="ff-bad">${esc(errorText(e))}</p>`; }
+  };
+  f.addEventListener('input', () => { clearTimeout(t); t = setTimeout(run, 350); });
+  f.addEventListener('change', () => { clearTimeout(t); t = setTimeout(run, 150); });
+  run();
+}

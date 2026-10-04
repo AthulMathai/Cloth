@@ -51,3 +51,22 @@ functions refuse guests; signed-out visitors can't call the bag functions; the
 checkout function returns 401). Shoppers are sent to sign in and brought back to
 the page they were on (`?next=`, same-site paths only). Order tracking links in
 existing confirmation emails keep working.
+
+## Promotions (Marketing → Promotions)
+
+Automatic sales with a start and end — flash sales, seasonal sales, a
+collection or category on sale, single products. No code is needed: the
+price drops everywhere (cards, product page, bag, checkout) while the
+promotion runs, through the same `variant_price()` function the order uses.
+
+- **Discount:** percent (up to 90%) or a dollar amount off each item.
+- **Applies to:** everything, or picked collections / categories / products.
+  Limited drops are left out unless "Include limited drops" is ticked.
+- **Badge:** short label on product cards and the product page.
+- **Banner:** optional strip across the top of the store with a live
+  countdown; customers can hide it for their visit.
+- **Rules:** the single biggest saving wins (promotions never stack); a
+  product's own sale price wins if lower; discount codes still apply on top
+  at checkout; paid orders keep the price paid.
+- **What changes** (on the edit page) lists exactly which prices will drop
+  before you save. Every change is in the audit log.

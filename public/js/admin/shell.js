@@ -53,7 +53,7 @@ const MODULES = {
   audit: () => import('./audit.js'),
   categories: () => import('./crud.js'), collections: () => import('./crud.js'), designers: () => import('./crud.js'),
   discounts: () => import('./crud.js'), themes: () => import('./crud.js'), shipping: () => import('./crud.js'), taxes: () => import('./crud.js'), store: () => import('./crud.js'),
-  fulfillment: () => import('./fulfillment.js'), promotions: () => import('./later.js'),
+  fulfillment: () => import('./fulfillment.js'), promotions: () => import('./crud.js'),
 };
 
 let permsCache = null;
