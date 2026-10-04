@@ -23,7 +23,7 @@ const NAV = [
     ['Partner inventory', '/admin/fulfillment/stock'], ['Shipments', '/admin/fulfillment/shipments']] },
   { group: 'Customers', perm: 'customers.read', items: [
     ['All customers', '/admin/customers'], ['High value', '/admin/customers?segment=high_value'], ['Inactive', '/admin/customers?segment=inactive'],
-    ['Custom-design customers', '/admin/customers?segment=custom_design'], ['Abandoned bags', '/admin/customers/abandoned'], ['Support', '/admin/support']] },
+    ['Custom-design customers', '/admin/customers?segment=custom_design'], ['Abandoned bags', '/admin/customers/abandoned'], ['Support', '/admin/support'], ['Emails', '/admin/emails']] },
   { group: 'Analytics', perm: 'analytics.read', items: [
     ['Sales', '/admin/analytics?tab=sales'], ['Website', '/admin/analytics?tab=website'], ['Products', '/admin/analytics?tab=products'],
     ['Fulfillment', '/admin/analytics?tab=fulfillment'], ['Custom designs', '/admin/analytics?tab=designs'], ['Forecast', '/admin/analytics?tab=forecast'],
@@ -48,6 +48,7 @@ const MODULES = {
   support: () => import('./support.js'),
   analytics: () => import('./analytics.js'),
   ai: () => import('./ai.js'),
+  emails: () => import('./emails.js'),
   users: () => import('./users.js'),
   audit: () => import('./audit.js'),
   categories: () => import('./crud.js'), collections: () => import('./crud.js'), designers: () => import('./crud.js'),

@@ -26,6 +26,7 @@
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_AI_TOKEN` | no | switch on real AI (Cloudflare Workers AI, free daily allowance). Without them AI runs in labelled test mode — see docs/ai.md |
 | `AI_PROVIDER` | no | `mock` forces test mode even when Cloudflare keys exist |
 | `AI_IMAGE_MODEL`, `AI_EMBED_MODEL`, `AI_VISION_MODEL` | no | override the default models (embedding model must return 384 numbers) |
+| `RESEND_API_KEY`, `EMAIL_FROM` | no | send customer emails through Resend (free tier); without them emails are logged in test mode — see docs/emails.md |
 | `MODERATION_PROVIDER`, `SHIPPING_PROVIDER`, `EMAIL_PROVIDER` | no | `mock` until real adapters are configured. Design moderation uses the built-in checks; with `INTEGRATIONS_MODE=live` images are sent to human review rather than auto-approved |
 
 `scripts/write-env.mjs` writes only the public values into
@@ -33,7 +34,8 @@
 
 3. Deploy. The scheduled functions start automatically: `scheduled-lifecycle`
    (every 10 minutes), `scheduled-fulfillment` (every 5 minutes) and
-   `scheduled-ai` (hourly, keeps the search index fresh).
+   `scheduled-ai` (hourly, keeps the search index fresh) and `scheduled-emails`
+   (every 2 minutes, sends customer emails).
 
 ## Before going live
 

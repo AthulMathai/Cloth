@@ -14,6 +14,10 @@
 [functions."scheduled-fulfillment"]
   schedule = "*/5 * * * *"
 
+# Customer emails (order updates, design decisions, support replies)
+[functions."scheduled-emails"]
+  schedule = "*/2 * * * *"
+
 # AI: refresh the product meaning index (search) for new/changed products
 [functions."scheduled-ai"]
   schedule = "17 * * * *"
