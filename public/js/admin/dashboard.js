@@ -48,7 +48,7 @@ export async function view(ctx) {
         <section class="cc-card"><h2>Best sellers</h2>${table(d.top_products, [
           { key: 'name', label: 'Product' }, { label: 'Units', align: 'right', render: r => num(r.units) },
           { label: 'Revenue', align: 'right', render: r => money(r.revenue_cents) }], { empty: `No sales in the last ${days} days.` })}
-          <p class="cc-muted cc-small">Partner performance appears here once fulfillment partners are set up (Phase 7).</p></section>
+          ${ctx.can('analytics.read') ? `<p class="cc-small"><a href="/admin/analytics?tab=products">Full product report →</a></p>` : ''}</section>
       </div>`,
     mount(root) {
       bindRowLinks(root, ctx.go);
