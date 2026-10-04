@@ -29,7 +29,7 @@ export default async (request, context) => {
     meta = await Promise.race([pageMeta(path, url), new Promise((r) => setTimeout(() => r(null), 1500))]);
   } catch (e) { console.error('seo', path, e.message); meta = null; }
   if (meta === undefined) return res;                       // not a page we describe
-  const store = meta?.store || 'TH8RTY';
+  const store = meta?.store || 'M-Way';
   if (meta?.notFound) status = 404;
   const m = meta && !meta.notFound ? meta : { title: meta?.notFound ? 'Not found' : null, description: null, noindex: !!meta?.notFound };
   const title = m.title ? `${m.title} · ${store}` : `${store} — ${m.tagline || 'Wear your idea.'}`;
@@ -63,7 +63,7 @@ export default async (request, context) => {
     const db = rest();
     const settings = await db('store_settings?select=key,value&key=in.(store.name,store.tagline)').catch(() => []);
     const S = Object.fromEntries(settings.map(r => [r.key, r.value]));
-    const store = S['store.name'] || 'TH8RTY';
+    const store = S['store.name'] || 'M-Way';
     const base = { store, tagline: S['store.tagline'] };
     let mm;
     if (path === '/') {

@@ -8,7 +8,7 @@ const url = () => process.env.SUPABASE_URL;
 const serviceKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 /** HMAC signature partners verify (and use when calling us back):
- *  header  X-TH8RTY-Signature: t=<unix seconds>,v1=<hex sha256(secret, "<t>.<body>")> */
+ *  header  X-MWay-Signature: t=<unix seconds>,v1=<hex sha256(secret, "<t>.<body>")> */
 export function sign(secret, body, t = Math.floor(Date.now() / 1000)) {
   return `t=${t},v1=${createHmac('sha256', secret).update(`${t}.${body}`).digest('hex')}`;
 }
@@ -36,8 +36,8 @@ export async function dispatchDue(limit = 20) {
       try {
         const res = await fetch(job.url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': job.number, 'X-TH8RTY-Signature': sign(job.secret, body),
-                     'User-Agent': 'TH8RTY-Fulfillment/1' },
+          headers: { 'Content-Type': 'application/json', 'Idempotency-Key': job.number, 'X-MWay-Signature': sign(job.secret, body),
+                     'User-Agent': 'MWay-Fulfillment/1' },
           body, signal: AbortSignal.timeout(10_000),
         });
         ok = res.ok || res.status === 409;               // 409 = partner already has it

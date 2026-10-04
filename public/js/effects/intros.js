@@ -218,7 +218,7 @@ async function bootSequence(swap, theme, duration) {
   o.style.setProperty('--boot-fg', c.accent);
   o.style.setProperty('--boot-alt', c.accent2);
   const lines = [
-    '> TH8RTY//NET  node 08  ............  online',
+    '> M-WAY//NET  node 08  ............  online',
     '> handshake  ........................  OK',
     '> decrypting catalogue  [##########] 100%',
     '> routing to NIGHT MARKET',

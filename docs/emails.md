@@ -66,7 +66,7 @@ custom SMTP:
 | Port | `465` |
 | Username | `resend` |
 | Password | your Resend API key |
-| Sender email / name | e.g. `hello@th8rty.ca` / `TH8RTY` |
+| Sender email / name | e.g. `hello@mway.ca` / `M-Way` |
 
 ## How it works
 

@@ -81,7 +81,7 @@ export async function view(ctx) {
         const reply = sf.reply_to.value.trim();
         if (reply && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(reply)) { toast('Enter a valid reply-to address.', 'bad'); return; }
         const vals = {
-          'email.enabled': sf.enabled.checked, 'email.from_name': sf.from_name.value.trim() || 'TH8RTY', 'email.reply_to': reply || null,
+          'email.enabled': sf.enabled.checked, 'email.from_name': sf.from_name.value.trim() || 'M-Way', 'email.reply_to': reply || null,
           'email.disabled_templates': [...sf.querySelectorAll('[name="tpl"]')].filter(x => !x.checked).map(x => x.value),
         };
         try { for (const [key, value] of Object.entries(vals)) await db.update('store_settings', { key }, { value }); toast('Email settings saved.'); }
@@ -121,8 +121,8 @@ function sample(t) {
     items: [{ name: 'Cyber Samurai Hoodie', color: 'Black', size: 'XL', quantity: 1, line_total_cents: 8900, editions: [184] },
             { name: 'Custom Essential Tee', color: 'White', size: 'M', quantity: 2, line_total_cents: 7800, custom: true }],
     shipments: [{ carrier: 'Canada Post', tracking_number: '7023 4567 8912 3456', tracking_url: 'https://www.canadapost-postescanada.ca/track-reperage/en', estimated_delivery: new Date(Date.now() + 3 * 864e5).toISOString() }] };
-  return { store: { name: 'TH8RTY' }, name: 'Maya Chen', order,
+  return { store: { name: 'M-Way' }, name: 'Maya Chen', order,
     design: { id: 'x', name: 'Moon dragon', note: t === 'design_rejected' ? 'The sleeve text looks like a sports team logo. Swap it for your own lettering.' : null },
     quote: { id: 'x', number: 1042, quantity: 120, product: 'Essential Hoodie', unit_cents: 4200, total_cents: 504000, expires_at: new Date(Date.now() + 14 * 864e5).toISOString() },
-    ticket: { id: 'x', number: 311, subject: 'Can I change my size?' }, message: 'Hi Maya — yes! I\'ve switched your hoodie to XL. Nothing else to do on your side.\n\n— Sam at TH8RTY' };
+    ticket: { id: 'x', number: 311, subject: 'Can I change my size?' }, message: 'Hi Maya — yes! I\'ve switched your hoodie to XL. Nothing else to do on your side.\n\n— Sam at M-Way' };
 }

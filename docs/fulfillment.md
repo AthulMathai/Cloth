@@ -61,7 +61,7 @@ Phone-first. Tabs: New, In production, Ready to ship, Done, Stock, Settings.
 One-tap Accept / Start / Printed / Packed, Ship with carrier + tracking,
 Reject with a reason, Reprint after a failed QC, print-file download links
 (signed for an hour by `/api/production-files`), pause new orders, set queue
-capacity and production time. Orders on hold at TH8RTY can't be advanced.
+capacity and production time. Orders on hold at M-Way can't be advanced.
 
 Give someone access: Admin → Fulfillment → Partners → partner → *Portal accounts*
 (they create a normal account first). Partner accounts can't be staff accounts.
@@ -78,10 +78,10 @@ shipments + scans, Choose partner / Reassign.
 
 - **Partners by API** (`integration = webhook`): the scheduled job POSTs
   `production_order.assigned` with `Idempotency-Key: PO-…` and
-  `X-TH8RTY-Signature: t=<unix>,v1=<hex hmac_sha256(secret, "t.body")>`,
+  `X-MWay-Signature: t=<unix>,v1=<hex hmac_sha256(secret, "t.body")>`,
   retrying with exponential backoff (critical alert after 5 failures).
   Partners report progress to `POST /api/partner-webhook` with
-  `X-TH8RTY-Partner: <code>` and the same signature.
+  `X-MWay-Partner: <code>` and the same signature.
 - **Carriers**: `POST /api/carrier-webhook` (bearer `CARRIER_WEBHOOK_SECRET`)
   with `{carrier, tracking_number, status, description, location, occurred_at, event_id}`.
   Scans are recorded once per `event_id` and never move an order backwards.

@@ -1,4 +1,4 @@
-# TH8RTY — clothing platform
+# M-Way — clothing platform
 
 Storefront, custom designer, moderation, fulfillment routing and admin for a
 print-on-demand clothing brand. Hosted on **Netlify**, backed by **Supabase**.

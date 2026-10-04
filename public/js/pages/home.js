@@ -16,7 +16,7 @@ export async function load() {
   const story = s['home.story'] || {};
 
   const [featured, drops, arrivals, archivedCount] = await Promise.all([
-    db.from('storefront_products').select('*').eq('is_featured', true).eq('category_slug', 'th8rty').neq('status', 'archived').order('created_at').limit(2),
+    db.from('storefront_products').select('*').eq('is_featured', true).eq('category_slug', 'm-way').neq('status', 'archived').order('created_at').limit(2),
     db.from('storefront_products').select('*').eq('is_limited', true).in('status', ['active', 'scheduled', 'sold_out']).order('release_at'),
     db.from('storefront_products').select('*').eq('status', 'active').eq('is_limited', false).order('created_at', { ascending: false }).limit(8),
     db.from('archive_drops').select('id'),
@@ -38,7 +38,7 @@ export async function load() {
       <p class="hero-sub">${esc(hero.sub || '')}</p>
       <div class="hero-actions">
         <a class="btn" href="${esc(hero.cta_href || '/custom')}">${esc(hero.cta_label || 'Start designing')}</a>
-        <a class="btn btn--quiet" href="/category/th8rty">Shop the sketchbook</a>
+        <a class="btn btn--quiet" href="/category/m-way">Shop the sketchbook</a>
       </div>
     </div>
     <div class="hero-header-switch" role="group" aria-label="Preview header style">

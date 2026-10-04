@@ -18,7 +18,7 @@ A design is **configuration, not a screenshot** (`custom_designs.config`):
 ```json
 { "layers": [{ "id": "l1", "type": "image", "placement": "front", "asset_id": "…",
                "x_in": 6, "y_in": 6, "w_in": 10, "h_in": 10, "rotation": 0 },
-             { "id": "l2", "type": "text", "placement": "back", "text": "TH8RTY CREW",
+             { "id": "l2", "type": "text", "placement": "back", "text": "M-WAY CREW",
                "font": "anton", "color": "#ffffff", "x_in": 6, "y_in": 3, "w_in": 10, "h_in": 2, "rotation": 0 }],
   "methods":  { "front": "dtg", "back": "dtf" },
   "services": [] }

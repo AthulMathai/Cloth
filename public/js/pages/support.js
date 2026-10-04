@@ -1,6 +1,6 @@
 // /support            — your requests + start a new one
 // /support/:id        — the conversation
-// Signed-in only; replies from TH8RTY show up here and in your account.
+// Signed-in only; replies from M-Way show up here and in your account.
 import { db, auth } from '../lib/supabase.js';
 import { themeForPage, fmtDate } from '../lib/store.js';
 import { esc } from '../components/ui.js';
@@ -68,7 +68,7 @@ async function thread(theme, id) {
       <div class="order-head"><h1 class="h-section">${esc(t.subject)}</h1><span class="status-pill${['resolved', 'closed'].includes(t.status) ? ' is-stopped' : ''}">${esc(STATUS[t.status] || t.status)}</span></div>
       <p class="muted">${esc(t.number)}${t.order_number ? ` · order <a href="/orders/${esc(t.order_number)}">${esc(t.order_number)}</a>` : ''} · opened ${fmtDate(t.created_at)}</p>
       <ol class="sup-thread">${t.messages.map(m => `<li class="sup-bubble ${m.author_type === 'customer' ? 'is-me' : m.author_type === 'system' ? 'is-system' : 'is-them'}">
-          <span class="muted small">${m.author_type === 'customer' ? 'You' : esc(m.author || 'TH8RTY')} · ${when(m.at)}</span>
+          <span class="muted small">${m.author_type === 'customer' ? 'You' : esc(m.author || 'M-Way')} · ${when(m.at)}</span>
           <p>${esc(m.body).replace(/\n/g, '<br>')}</p></li>`).join('')}</ol>
       ${closed ? `<p class="muted">This request is closed. <a href="/support">Start a new one</a> if you need more help.</p>` : `
       <form class="auth-card" data-reply style="margin:0;max-width:none">

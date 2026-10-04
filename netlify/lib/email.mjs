@@ -12,7 +12,7 @@ export function emailProvider() {
 /** -> { ok, id?, permanent?, error? } */
 export async function sendEmail({ id, to, subject, html, text, fromName, replyTo }) {
   if (emailProvider() === 'mock') return { ok: false, skipped: true, error: 'Test mode: no email provider configured' };
-  const from = `${(fromName || 'TH8RTY').replace(/[<>"]/g, '')} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
+  const from = `${(fromName || 'M-Way').replace(/[<>"]/g, '')} <${process.env.EMAIL_FROM || 'onboarding@resend.dev'}>`;
   const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 8000);
   try {
     const res = await fetch('https://api.resend.com/emails', {

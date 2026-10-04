@@ -23,13 +23,13 @@ export async function load({ rest = '' }, query) {
   const theme = await themeForPage('account');
   const gate = (h) => ({ theme, title: 'Partner portal', html: `<div class="cc pp"><main class="cc-main"><section class="cc-gate">${h}</section></main></div>` });
   if (!auth.user) {
-    return gate(`<h1>Partner portal</h1><p>Sign in with the account TH8RTY linked to your print shop.</p>
+    return gate(`<h1>Partner portal</h1><p>Sign in with the account M-Way linked to your print shop.</p>
       <p><a class="cc-btn cc-btn--primary" href="/account/sign-in?next=${encodeURIComponent(location.pathname + location.search)}">Sign in</a></p>`);
   }
   let partners;
   try { partners = await db.rpc('partner_me'); } catch (e) { return gate(`<h1>Partner portal</h1><p>${esc(errorText(e))}</p>`); }
   if (!partners.length) {
-    return gate(`<h1>No partner access</h1><p>${esc(auth.user.email)} isn’t linked to a production partner. Ask TH8RTY to add this email to your partner account.</p>
+    return gate(`<h1>No partner access</h1><p>${esc(auth.user.email)} isn’t linked to a production partner. Ask M-Way to add this email to your partner account.</p>
       <p><a class="cc-btn" href="/">Back to the store</a></p>`);
   }
   const p = partners.find(x => x.code === query.get('p')) || partners[0];
@@ -57,7 +57,7 @@ export async function load({ rest = '' }, query) {
     theme, title: `${p.name} · Partner portal`,
     html: `<div class="cc pp">
       <header class="pp-top">
-        <div><span class="pp-kicker">TH8RTY partner portal</span>
+        <div><span class="pp-kicker">M-Way partner portal</span>
           <h1>${esc(p.name)} ${p.is_test ? '<span class="cc-tag">test partner</span>' : ''} ${p.status !== 'active' ? pill(p.status) : ''}</h1>
           <p class="cc-muted cc-small">${esc(p.city || '')}${p.province ? ', ' + esc(p.province) : ''} · queue ${num(s.load)}/${num(p.capacity_per_day)} units${s.late_open ? ` · <strong class="pp-late">${s.late_open} late</strong>` : ''}</p></div>
         <div class="pp-who">${partners.length > 1 ? `<select aria-label="Partner" data-switch>${partners.map(x => `<option value="${esc(x.code)}"${x.id === p.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>` : ''}
@@ -119,7 +119,7 @@ async function stockPage(p) {
   const rows = await db.from('partner_inventory').select('product_type,color,size,on_hand,reserved,low_threshold').eq('partner_id', p.id);
   const types = p.product_types?.length ? p.product_types : ['tee', 'hoodie', 'crewneck', 'longsleeve', 'tank'];
   return {
-    body: `<header class="cc-head"><div><h2>Blank stock</h2><p class="cc-muted cc-small">${p.tracks_inventory ? 'Orders are only routed to you when the blank is free here.' : 'TH8RTY doesn’t check your blank stock before routing.'}</p></div>
+    body: `<header class="cc-head"><div><h2>Blank stock</h2><p class="cc-muted cc-small">${p.tracks_inventory ? 'Orders are only routed to you when the blank is free here.' : 'M-Way doesn’t check your blank stock before routing.'}</p></div>
         <button class="cc-btn cc-btn--primary" data-stock-add>Count / receive stock</button></header>
       ${stockGridHTML(rows)}`,
     mount(root, { reload }) { bindStockGrid(root, p.id, types, reload); },
@@ -137,11 +137,11 @@ function settingsPage(p) {
         <div class="cc-form-actions"><button class="cc-btn cc-btn--primary">Save</button><span class="cc-form-msg" data-msg></span></div>
       </form></section>
       ${['active', 'inactive'].includes(p.status) ? `<section class="cc-card"><h2>${p.status === 'active' ? 'Pause new orders' : 'Paused'}</h2>
-        <p>${p.status === 'active' ? 'Closed for a holiday or a machine is down? Pause and TH8RTY routes new orders elsewhere. Orders you already have stay with you.' : 'You’re not receiving new orders.'}</p>
+        <p>${p.status === 'active' ? 'Closed for a holiday or a machine is down? Pause and M-Way routes new orders elsewhere. Orders you already have stay with you.' : 'You’re not receiving new orders.'}</p>
         <button class="cc-btn ${p.status === 'active' ? 'cc-btn--danger' : 'cc-btn--primary'}" data-pause="${p.status === 'active'}">${p.status === 'active' ? 'Pause new orders' : 'Start receiving orders'}</button></section>` : ''}
-      <section class="cc-card"><h2>What TH8RTY routes to you</h2>
+      <section class="cc-card"><h2>What M-Way routes to you</h2>
         <p class="cc-small">Garments: ${p.product_types?.length ? p.product_types.map(t => esc(label(t))).join(', ') : 'all'} · Methods: ${(p.print_methods || []).map(m => esc(m.toUpperCase())).join(', ') || '—'}</p>
-        <p class="cc-small cc-muted">To change these, contact TH8RTY.</p></section>`,
+        <p class="cc-small cc-muted">To change these, contact M-Way.</p></section>`,
     mount(root, { reload }) {
       root.querySelector('[data-settings]').onsubmit = async (e) => {
         e.preventDefault();

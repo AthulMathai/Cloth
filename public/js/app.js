@@ -99,7 +99,7 @@ function setMeta(name, content) {
 // ---------------------------------------------------------------------
 // Header & footer
 // ---------------------------------------------------------------------
-let storeName = 'TH8RTY';
+let storeName = 'M-Way';
 const NAV = [['/shop', 'Shop'], ['/custom', 'Custom'], ['/drops', 'Drops'], ['/archive', 'Archive']];
 const ICONS = {
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',

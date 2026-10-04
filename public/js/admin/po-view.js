@@ -38,7 +38,7 @@ export function poShipToHTML(po) {
 }
 
 export function poActionsHTML(po) {
-  if (po.on_hold) return `<div class="cc-alert cc-alert--bad"><strong>On hold.</strong> TH8RTY paused this order. Don’t continue until it’s released.</div>`;
+  if (po.on_hold) return `<div class="cc-alert cc-alert--bad"><strong>On hold.</strong> M-Way paused this order. Don’t continue until it’s released.</div>`;
   const btns = (NEXT[po.status] || []).map(([a, l, tone]) => `<button class="cc-btn ${tone ? 'cc-btn--' + tone : ''}" data-po-act="${a}">${esc(l)}</button>`);
   if (po.shipment && po.shipment.carrier?.toLowerCase() === 'test carrier' && !['delivered', 'returned'].includes(po.shipment.status)) {
     btns.push(`<button class="cc-btn" data-po-act="test-scan" title="Only for the built-in test carrier">Simulate next carrier scan</button>`);
@@ -90,13 +90,13 @@ export function bindPoActions(root, po, after) {
     let data = {};
     if (act === 'reject') {
       const r = await confirmDialog({ title: `Can’t make ${po.number}?`, tone: 'danger', confirm: 'Send it back',
-        body: '<p>TH8RTY re-routes it to another partner straight away. Blanks reserved for it are released.</p>', note: true, noteLabel: 'Why?', noteRequired: true });
+        body: '<p>M-Way re-routes it to another partner straight away. Blanks reserved for it are released.</p>', note: true, noteLabel: 'Why?', noteRequired: true });
       if (!r.ok) return; data.note = r.note;
     } else if (act === 'reprint') {
       const r = await confirmDialog({ title: 'Send back for a reprint?', note: true, noteLabel: 'What failed quality check?', noteRequired: true, confirm: 'Reprint' });
       if (!r.ok) return; data.note = r.note;
     } else if (act === 'note') {
-      const r = await confirmDialog({ title: 'Add a note', note: true, noteLabel: 'Note (TH8RTY staff and your team see it)', noteRequired: true, confirm: 'Add note' });
+      const r = await confirmDialog({ title: 'Add a note', note: true, noteLabel: 'Note (M-Way staff and your team see it)', noteRequired: true, confirm: 'Add note' });
       if (!r.ok) return; data.note = r.note;
     } else if (act === 'ship') {
       const r = await shipDialog(); if (!r) return; data = r;
@@ -108,7 +108,7 @@ export function bindPoActions(root, po, after) {
         toast('Test carrier scan recorded.');
       } else {
         const out = await db.rpc('partner_po_action', { p_po_id: po.id, p_action: act, p_data: data });
-        toast(act === 'reject' ? 'Sent back to TH8RTY for re-routing.' : act === 'note' ? 'Note added.' : `${po.number}: ${PO_STAGE[out.status] || label(out.status)}`);
+        toast(act === 'reject' ? 'Sent back to M-Way for re-routing.' : act === 'note' ? 'Note added.' : `${po.number}: ${PO_STAGE[out.status] || label(out.status)}`);
       }
       after();
     } catch (e) { toast(errorText(e), 'bad'); b.disabled = false; }

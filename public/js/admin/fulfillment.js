@@ -221,8 +221,8 @@ async function partnerDetail(ctx, id) {
               <div class="cc-form-actions"><button class="cc-btn">Save endpoint</button></div></form>
               <p class="cc-small">Signing secret: <code class="ff-secret" data-secret="${esc(d.integration?.secret || '')}">••••••••</code> <button class="cc-btn cc-btn--small" data-reveal>Show</button></p>
               <details class="cc-small"><summary>How partners integrate</summary>
-                <p>We POST <code>production_order.assigned</code> to their endpoint with <code>Idempotency-Key: PO-…</code> and <code>X-TH8RTY-Signature: t=…,v1=hmac_sha256(secret, "t.body")</code>, retrying with backoff until they answer 2xx.</p>
-                <p>They report progress by POSTing <code>{"production_order":"PO-…","action":"accept|reject|start|printed|reprint|packed|ship|note", …}</code> to <code>/api/partner-webhook</code> with header <code>X-TH8RTY-Partner: ${esc(p.code)}</code> and the same signature.</p></details>` : ''}
+                <p>We POST <code>production_order.assigned</code> to their endpoint with <code>Idempotency-Key: PO-…</code> and <code>X-MWay-Signature: t=…,v1=hmac_sha256(secret, "t.body")</code>, retrying with backoff until they answer 2xx.</p>
+                <p>They report progress by POSTing <code>{"production_order":"PO-…","action":"accept|reject|start|printed|reprint|packed|ship|note", …}</code> to <code>/api/partner-webhook</code> with header <code>X-MWay-Partner: ${esc(p.code)}</code> and the same signature.</p></details>` : ''}
           </section>
           <section class="cc-card"><h2>Performance</h2>
             <dl class="ff-stats"><dt>Shipped (30 days)</dt><dd>${num(s.shipped_30)}</dd><dt>On time (90 days)</dt><dd>${s.on_time_pct ?? '—'}%</dd>

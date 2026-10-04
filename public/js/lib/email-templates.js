@@ -30,7 +30,7 @@ export const TEMPLATES = {
 
 export function render(template, data = {}, { siteUrl = '' } = {}) {
   const site = siteUrl.replace(/\/$/, '');
-  const store = data.store?.name || 'TH8RTY';
+  const store = data.store?.name || 'M-Way';
   const hi = data.name ? `Hi ${String(data.name).split(' ')[0]},` : 'Hi,';
   const o = data.order;
   const orderUrl = o ? `${site}/orders/${encodeURIComponent(o.number)}` : `${site}/orders`;
