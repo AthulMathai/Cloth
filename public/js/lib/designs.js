@@ -306,3 +306,51 @@ export function wrapPatternSVG({ type = 'tee', color = '#141414', placements = [
     ${fills.join('')}<path d="${cuts.join(' ')}" fill="var(--surface, #f3efe6)" opacity=".6"/>
     ${g(lines.join('').replace(/class="faint"/g, `stroke="${faint}"`))}<g fill="${ink}">${labels.join('')}</g></svg>`;
 }
+
+// ---------------------------------------------------------------------
+// Background removal (in the browser, free): clears a plain background
+// that touches the image edges — typical for AI art and product photos on
+// white. Returns a PNG blob, or null if the background isn't one colour.
+// ---------------------------------------------------------------------
+export async function removeBackground(source, { tolerance = 40 } = {}) {
+  const url = typeof source === 'string' ? source : URL.createObjectURL(source);
+  const img = await loadImage(url);
+  if (typeof source !== 'string') URL.revokeObjectURL(url);
+  const scale = Math.min(1, 3000 / Math.max(img.naturalWidth, img.naturalHeight));
+  const W = Math.round(img.naturalWidth * scale), H = Math.round(img.naturalHeight * scale);
+  const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, W, H);
+  const data = ctx.getImageData(0, 0, W, H), px = data.data;
+
+  // Background colour = median of the border pixels; give up if the border varies a lot.
+  const border = [];
+  for (let x = 0; x < W; x += 2) border.push(x, (H - 1) * W + x);
+  for (let y = 0; y < H; y += 2) border.push(y * W, y * W + W - 1);
+  const opaque = border.filter(i => px[i * 4 + 3] > 200);
+  if (opaque.length < border.length * 0.5) return null;                 // already transparent
+  const med = (k) => opaque.map(i => px[i * 4 + k]).sort((a, b) => a - b)[opaque.length >> 1];
+  const bg = [med(0), med(1), med(2)];
+  const dist = (i) => Math.hypot(px[i * 4] - bg[0], px[i * 4 + 1] - bg[1], px[i * 4 + 2] - bg[2]);
+  if (opaque.filter(i => dist(i) < tolerance).length < opaque.length * 0.7) return null;
+
+  // Flood fill from the edges through pixels close to the background colour.
+  const seen = new Uint8Array(W * H), queue = new Int32Array(W * H);
+  let head = 0, tail = 0, cleared = 0;
+  for (const i of border) if (!seen[i] && dist(i) < tolerance) { seen[i] = 1; queue[tail++] = i; }
+  while (head < tail) {
+    const i = queue[head++], x = i % W;
+    px[i * 4 + 3] = 0; cleared++;
+    const n = [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, i - W, i + W];
+    for (const j of n) {
+      if (j < 0 || j >= W * H || seen[j]) continue;
+      seen[j] = 1;
+      const d = dist(j);
+      if (d < tolerance) queue[tail++] = j;
+      else if (d < tolerance * 1.8) px[j * 4 + 3] = Math.min(px[j * 4 + 3], Math.round(255 * (d - tolerance) / (tolerance * 0.8)));   // soft edge
+    }
+  }
+  if (cleared < W * H * 0.02) return null;
+  ctx.putImageData(data, 0, 0);
+  return new Promise(r => canvas.toBlob(r, 'image/png'));
+}

@@ -4,6 +4,7 @@ import { getBag, setLine, quote, signInUrl } from '../lib/cart.js';
 import { auth } from '../lib/supabase.js';
 import { storage } from '../lib/supabase.js';
 import { esc, garmentSVG } from '../components/ui.js';
+import { recsSlot, mountRecs } from '../lib/recommend.js';
 
 export async function load() {
   const theme = await themeForPage('account');
@@ -13,7 +14,7 @@ export async function load() {
     html: `<section class="section commerce"><div class="wrap">
       <h1 class="h-section">Your bag</h1>
       <div class="bag-layout" data-bag><p class="muted">Loading your bag…</p></div>
-    </div></section>`,
+    </div></section>${recsSlot('bag')}`,
     async mount(root) {
       const host = root.querySelector('[data-bag]');
       let code = '';
@@ -80,7 +81,14 @@ export async function load() {
         });
         host.querySelector('[data-code]').onsubmit = (e) => { e.preventDefault(); code = e.target.code.value.trim().toUpperCase(); render(); };
         host.querySelector('[data-blocked]')?.addEventListener('click', (e) => e.preventDefault());
+        const ids = [...new Set(items.map(i => i.product_id).filter(Boolean))].sort().join(',');
+        if (ids !== lastIds) {
+          lastIds = ids;
+          mountRecs(root, { slot: 'bag', fn: 'recommend_for_bag', args: { p_product_ids: ids.split(','), p_limit: 6 },
+            title: 'Goes well with', cardStyle: theme.config?.cards?.style, source: 'bag' });
+        }
       };
+      let lastIds = '';
       render();
     },
   };

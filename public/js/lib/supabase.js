@@ -118,6 +118,8 @@ async function authCall(path, body) {
 export const auth = {
   get session() { return session; },
   get user() { return session?.user || null; },
+  /** A fresh access token for calling our own /api functions (null if signed out). */
+  async token() { await maybeRefresh(); return session?.access_token || null; },
   onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); },
   async signIn(email, password) { setSession(await authCall('token?grant_type=password', { email, password })); return session; },
   async signUp(email, password, fullName) {

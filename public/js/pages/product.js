@@ -5,6 +5,7 @@ import { esc, garmentSVG, calloutSVG, priceHTML, startCountdowns } from '../comp
 import { track } from '../lib/analytics.js';
 import { addToBag, signInUrl } from '../lib/cart.js';
 import { wishlistButtonHTML, bindWishlist } from '../lib/wishlist.js';
+import { recsSlot, mountRecs } from '../lib/recommend.js';
 
 export async function load({ slug }) {
   const p = await db.from('storefront_products').select('*').eq('slug', slug).single().catch(() => null);
@@ -62,7 +63,8 @@ export async function load({ slug }) {
         ${p.collection_name ? `<dt>Collection</dt><dd><a href="/collections/${p.collection_slug}">${esc(p.collection_name)}</a></dd>` : ''}
         ${p.print_methods?.length ? `<dt>Print</dt><dd>${p.print_methods.map(m => m.toUpperCase()).join(', ')}</dd>` : ''}
       </dl>
-    </div></div>`;
+    </div></div>
+    ${recsSlot('product')}`;
 
   return {
     theme, html, title: p.seo?.title || p.name, description: p.seo?.description || p.description,
@@ -70,6 +72,8 @@ export async function load({ slug }) {
     mount(root) {
       track(p.is_limited ? 'limited_drop_viewed' : 'product_view', { entity_type: 'product', entity_id: p.id });
       bindWishlist(root, { productId: p.id });
+      mountRecs(root, { slot: 'product', fn: 'recommend_for_product', args: { p_product_id: p.id, p_limit: 8 },
+        title: 'You might also like', cardStyle: theme.config?.cards?.style, source: 'product' });
       const stop = startCountdowns(root);
       const sizesEl = root.querySelector('[data-sizes]');
       if (!sizesEl) return stop;

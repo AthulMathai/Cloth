@@ -20,7 +20,7 @@ print-on-demand clothing brand. Hosted on **Netlify**, backed by **Supabase**.
 | 7 | Fulfillment: partners, automatic routing, production orders, partner portal (`/partner`), partner blank stock, shipments + tracking, alerts, partner webhooks | **Built** — see docs/fulfillment.md. Five fictional test partners are seeded |
 | 8 | CRM: customer profiles with lifetime value, segments, tags, notes, activity; support desk + customer help pages; wishlist; abandoned bags | **Built** — see docs/crm.md |
 | 9 | Analytics: sales, website (traffic, funnel, sources, searches), products, fulfillment, custom designer — date ranges, period comparison, charts + tables, CSV | **Built** — see docs/analytics.md |
-| 10 | AI | Planned |
+| 10 | AI: “Describe it” design generation in the designer, browser background removal, meaning-based search, recommendations (product, bag, home), stock & drop forecasting, image descriptions for moderators, admin AI page | **Built** — see docs/ai.md. Runs free on Cloudflare Workers AI; labelled test mode until keys are added |
 
 ## Run it locally
 

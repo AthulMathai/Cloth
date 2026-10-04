@@ -15,7 +15,7 @@ export function providerName() {
  * design: custom_designs row; assets: design_assets rows used by the design;
  * terms: moderation_terms rows; fetchBytes(asset, range?) -> ArrayBuffer|null
  */
-export async function moderateDesign({ design, assets, terms, fetchBytes, live }) {
+export async function moderateDesign({ design, assets, terms, fetchBytes, live, describe = null, isRisky = () => false }) {
   const findings = [];
   const add = (severity, category, message, extra = {}) => findings.push({ severity, category, message, ...extra });
   const verified = [];
@@ -67,6 +67,23 @@ export async function moderateDesign({ design, assets, terms, fetchBytes, live }
           ? `The ${hit[0]} may contain prohibited content and needs a person to review it.`
           : `The ${hit[0]} may contain protected material (${term.category}) and needs a person to review it.`,
         { term: term.term });
+    }
+  }
+
+  // AI image description (optional): a short caption of each image is kept
+  // with the findings so reviewers see what's in it at a glance, and words
+  // like "logo" or "blood" send the design to a person. It never approves
+  // anything on its own.
+  if (describe) {
+    const raster = assets.filter(a => verified.includes(a.id) && a.mime !== 'image/svg+xml' && (a.bytes || 0) <= 4 * 1024 * 1024).slice(0, 2);
+    for (const a of raster) {
+      try {
+        const bytes = await fetchBytes(a);
+        const caption = bytes && await describe(new Uint8Array(bytes));
+        if (!caption) continue;
+        if (isRisky(caption)) add('review', 'vision', `An automatic description of "${a.original_name || 'artwork'}" mentions something that needs a person to check it.`, { caption });
+        else add('info', 'vision', `Automatic description: ${caption}`, { caption });
+      } catch (e) { add('info', 'vision', 'The automatic image description wasn\'t available this time.'); }
     }
   }
 

@@ -4,6 +4,7 @@
 import { rest, rpc, getUser, configured } from '../lib/supabase.mjs';
 import { json, fail, readJson, rateLimited } from '../lib/http.mjs';
 import { moderateDesign } from '../lib/moderation.mjs';
+import { provider as aiProvider, describeImage, captionLooksRisky } from '../lib/ai.mjs';
 
 const keyHeaders = (key) => ({ apikey: key, ...(key.startsWith('eyJ') ? { Authorization: `Bearer ${key}` } : {}) });
 
@@ -35,7 +36,15 @@ export default async (req) => {
     ? await rest(`design_assets?id=in.(${assetIds.join(',')})&user_id=eq.${user.id}&select=*`) : [];
   const terms = await rest('moderation_terms?select=term,category,action');
 
-  const result = await moderateDesign({ design, assets, terms, fetchBytes, live: process.env.INTEGRATIONS_MODE === 'live' });
+  // Optional AI description of each image (needs a real AI provider and the
+  // ai.vision_moderation setting; skipped in test mode).
+  let describe = null;
+  if (aiProvider() !== 'mock') {
+    const [s] = await rest('store_settings?key=eq.ai.vision_moderation&select=value');
+    if (!s || s.value === true || s.value === 'true') describe = describeImage;
+  }
+  const result = await moderateDesign({ design, assets, terms, fetchBytes, live: process.env.INTEGRATIONS_MODE === 'live',
+    describe, isRisky: captionLooksRisky });
   const saved = await rpc('record_moderation', {
     p_design_id: design.id, p_version: design.version, p_provider: result.provider, p_score: result.score,
     p_decision: result.decision, p_findings: result.findings, p_asset_ids: result.verified,

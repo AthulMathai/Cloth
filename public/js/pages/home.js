@@ -1,9 +1,10 @@
 // Home: the house artist's page and the face of the brand.
-import { db } from '../lib/supabase.js';
+import { db, auth } from '../lib/supabase.js';
 import { loadBoot, themeForPage, money } from '../lib/store.js';
 import { FONTS } from '../lib/theme.js';
 import { esc, productGrid, dropCard, startCountdowns, varsityArch, scriptMark, calloutSVG, garmentSVG } from '../components/ui.js';
 import { track } from '../lib/analytics.js';
+import { recsSlot, mountRecs } from '../lib/recommend.js';
 
 const HEADER_KEY = 'th8rty.headerPreview';
 
@@ -91,6 +92,7 @@ export async function load() {
     </div>
   </section>
 
+  ${recsSlot('home')}
   <section class="section">
     <div class="wrap">
       <div class="section-head"><h2 class="h-section">New in</h2><a href="/shop">Shop everything</a></div>
@@ -124,6 +126,8 @@ export async function load() {
     description: 'Clothing drawn by hand first. Shop limited drops, explore the archive, or design your own.',
     mount(root) {
       const stop = startCountdowns(root);
+      if (auth.user) mountRecs(root, { slot: 'home', fn: 'recommend_for_me', args: { p_limit: 8 }, title: 'Picked for you',
+        cardStyle, source: 'home', min: 3 });
       root.querySelectorAll('.hero-header-switch button').forEach(b => b.onclick = () => {
         const style = b.dataset.style;
         try { sessionStorage.setItem(HEADER_KEY, style); } catch {}

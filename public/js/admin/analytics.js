@@ -6,10 +6,11 @@ import { db } from '../lib/supabase.js';
 import { esc, money, num, table, dateTime, label, toast, errorText } from './ui.js';
 import { timeSeries, barList, funnel } from './charts.js';
 
-const TABS = [['sales', 'Sales'], ['website', 'Website'], ['products', 'Products'], ['fulfillment', 'Fulfillment'], ['designs', 'Custom designs']];
+const TABS = [['sales', 'Sales'], ['website', 'Website'], ['products', 'Products'], ['fulfillment', 'Fulfillment'], ['designs', 'Custom designs'], ['forecast', 'Forecast']];
+const WINDOWS = [[14, 'last 14 days'], [28, 'last 28 days'], [56, 'last 8 weeks'], [90, 'last 90 days']];
 const RANGES = [['7d', 'Last 7 days'], ['30d', 'Last 30 days'], ['90d', 'Last 90 days'], ['12m', 'Last 12 months'],
   ['mtd', 'This month'], ['lastmonth', 'Last month'], ['ytd', 'Year to date'], ['custom', 'Custom…']];
-const RPC = { sales: 'analytics_sales', website: 'analytics_website', products: 'analytics_products', fulfillment: 'analytics_fulfillment', designs: 'analytics_designs' };
+const RPC = { sales: 'analytics_sales', website: 'analytics_website', products: 'analytics_products', fulfillment: 'analytics_fulfillment', designs: 'analytics_designs', forecast: 'analytics_forecast' };
 
 const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
@@ -79,7 +80,9 @@ function card(title, body, { id, tableHtml, note, wide } = {}) {
 export async function view(ctx) {
   const tab = TABS.some(t => t[0] === ctx.query.get('tab')) ? ctx.query.get('tab') : 'sales';
   const range = resolveRange(ctx.query);
-  const args = { p_from: range.from, p_to: range.to };
+  const isForecast = tab === 'forecast';
+  const win = WINDOWS.some(w => String(w[0]) === ctx.query.get('window')) ? Number(ctx.query.get('window')) : 28;
+  const args = isForecast ? { p_days: win } : { p_from: range.from, p_to: range.to };
   if (['sales', 'website', 'fulfillment'].includes(tab)) args.p_grain = range.grain;
   const d = await db.rpc(RPC[tab], args);
   const qs = (o) => '/admin/analytics?' + new URLSearchParams(Object.entries({ tab, range: range.key, ...(range.key === 'custom' ? { from: range.from, to: range.to } : {}),
@@ -88,23 +91,24 @@ export async function view(ctx) {
   const fmtRange = `${parse(range.from).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })} – ${parse(range.to).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })}`;
   return {
     title: `Analytics · ${TABS.find(t => t[0] === tab)[1]}`,
-    html: `<header class="cc-head"><div><h1>Analytics</h1><p class="cc-muted">${esc(fmtRange)} · ${num(range.days)} days · compared with the ${num(range.days)} days before</p></div>
+    html: `<header class="cc-head"><div><h1>Analytics</h1><p class="cc-muted">${isForecast ? `Projections from the sales pace over the ${esc(WINDOWS.find(w => w[0] === win)[1])}` : `${esc(fmtRange)} · ${num(range.days)} days · compared with the ${num(range.days)} days before`}</p></div>
         <div class="cc-actions"><button class="cc-btn" data-export>Export CSV</button></div></header>
       <form class="an-filters" data-filters>
         <nav class="cc-tabs" aria-label="Report">${TABS.map(([k, l]) => `<a href="${qs({ tab: k })}"${k === tab ? ' aria-current="true"' : ''}>${l}</a>`).join('')}</nav>
-        <label class="an-field"><span>Period</span><select name="range">${RANGES.map(([k, l]) => `<option value="${k}"${k === range.key ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+        ${isForecast ? `<label class="an-field"><span>Based on</span><select name="window">${WINDOWS.map(([k, l]) => `<option value="${k}"${k === win ? ' selected' : ''}>${l}</option>`).join('')}</select></label>` : `<label class="an-field"><span>Period</span><select name="range">${RANGES.map(([k, l]) => `<option value="${k}"${k === range.key ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
         <span class="an-custom"${range.key === 'custom' ? '' : ' hidden'}><input type="date" name="from" value="${range.from}" aria-label="From"> – <input type="date" name="to" value="${range.to}" aria-label="To">
-          <button class="cc-btn cc-btn--small">Apply</button></span>
+          <button class="cc-btn cc-btn--small">Apply</button></span>`}
         ${['sales', 'website', 'fulfillment'].includes(tab) ? `<label class="an-field"><span>Group by</span><select name="grain">${['day', 'week', 'month'].map(g => `<option value="${g}"${g === range.grain ? ' selected' : ''}>${label(g)}</option>`).join('')}</select></label>` : ''}
       </form>
       <div class="an-body">${built.html}</div>`,
     mount(root) {
       const f = root.querySelector('[data-filters]');
-      f.range.onchange = () => {
+      if (f.window) f.window.onchange = () => ctx.go(`/admin/analytics?tab=forecast&window=${f.window.value}`);
+      if (f.range) f.range.onchange = () => {
         if (f.range.value === 'custom') { root.querySelector('.an-custom').hidden = false; return; }
         ctx.go(qs({ range: f.range.value, from: '', to: '' }));
       };
-      f.onsubmit = (e) => { e.preventDefault(); if (f.from.value && f.to.value) ctx.go(qs({ range: 'custom', from: f.from.value, to: f.to.value })); };
+      f.onsubmit = (e) => { e.preventDefault(); if (f.from && f.from.value && f.to.value) ctx.go(qs({ range: 'custom', from: f.from.value, to: f.to.value })); };
       if (f.grain) f.grain.onchange = () => ctx.go(qs({ grain: f.grain.value }));
       root.querySelectorAll('[data-table-toggle]').forEach(b => b.addEventListener('click', () => {
         const id = b.dataset.tableToggle, t = root.querySelector(`[data-table="${id}"]`), c = root.querySelector(`[data-chart="${id}"]`);
@@ -112,7 +116,7 @@ export async function view(ctx) {
         b.setAttribute('aria-pressed', String(show)); b.textContent = show ? 'Chart' : 'Table';
       }));
       root.querySelector('[data-export]').onclick = () => {
-        try { download(`${tab}-${range.from}-to-${range.to}.csv`, built.csv()); } catch (e) { toast(errorText(e), 'bad'); }
+        try { download(isForecast ? `forecast-${win}d.csv` : `${tab}-${range.from}-to-${range.to}.csv`, built.csv()); } catch (e) { toast(errorText(e), 'bad'); }
       };
       const cleanups = (built.charts || []).map(([id, opts]) => timeSeries(root.querySelector(`[data-chart="${id}"]`), opts));
       return () => cleanups.forEach(c => c());
@@ -132,6 +136,52 @@ const dollars = (c) => (c / 100).toFixed(2);
 
 // ---------------------------------------------------------------------
 const TAB_VIEWS = {
+  forecast(d) {
+    const soon = d.variants.filter(v => v.days_left != null && v.days_left <= 14);
+    const reorder = d.variants.reduce((n, v) => n + (v.reorder || 0), 0);
+    const dropsSoon = d.drops.filter(x => x.eta_hours != null && x.eta_hours <= 48);
+    const blanksSoon = d.blanks.filter(b => b.days_left != null && b.days_left <= 14);
+    const days = (v) => v == null ? '<span class="cc-muted">no recent sales</span>'
+      : v <= 7 ? `<span class="cc-pill cc-pill--bad">${v} days</span>` : v <= 14 ? `<span class="cc-pill cc-pill--warn">${v} days</span>` : `${v} days`;
+    const eta = (h) => h == null ? '<span class="cc-muted">no sales this week</span>' : h < 1 ? 'within the hour'
+      : h <= 48 ? `<span class="cc-pill cc-pill--warn">~${Math.round(h)} h</span>` : `~${Math.round(h / 24)} days`;
+    return {
+      html: `<div class="cc-kpis an-kpis">
+          ${stat('Store SKUs out within 14 days', num(soon.length), { sub: soon.length ? esc(soon.slice(0, 2).map(v => `${v.product} ${v.color} ${v.size}`).join(', ')) : 'none at the current pace' })}
+          ${stat('Units to reorder', num(reorder), { sub: 'to cover the next 30 days' })}
+          ${stat('Partner blanks out within 14 days', num(blanksSoon.length), { sub: 'by partner, colour and size' })}
+          ${stat('Drops selling out within 48 h', num(dropsSoon.length), { sub: dropsSoon.length ? esc(dropsSoon.map(x => x.drop_name).join(', ')) : 'none at the current pace' })}
+        </div>
+        <div class="an-grid">
+          ${card('Items sold per week', '', { id: 'demand', wide: true, note: 'All paid items, last 12 weeks, by order week.',
+              tableHtml: table([...d.demand].reverse(), [{ label: 'Week of', render: r => esc(r.week) }, { label: 'Items', align: 'right', render: r => num(r.units) }]) })}
+          ${card('Store stock running out', table(d.variants, [
+              { label: 'Product', render: r => `<a href="/product/${esc(r.slug)}" target="_blank" rel="noopener">${esc(r.product)}</a><br><span class="cc-muted cc-small">${esc(r.color)} / ${esc(r.size)} · ${esc(r.sku)}</span>` },
+              { label: 'In stock', align: 'right', render: r => num(r.available) }, { label: 'Sells / day', align: 'right', render: r => r.per_day },
+              { label: 'Runs out in', align: 'right', render: r => days(r.days_left) }, { label: 'Reorder', align: 'right', render: r => r.reorder ? num(r.reorder) : '—' }],
+              { empty: 'Nothing sold in this window, so there\'s nothing to project.' }),
+              { wide: true, note: 'Runs out in = stock available ÷ average daily sales in the window. Reorder = 30 days of sales minus stock on hand. Limited drops are excluded (they never restock).' })}
+          ${card('Live drops', table(d.drops, [
+              { label: 'Drop', render: r => `${esc(r.drop_name)} <span class="cc-muted">#${String(r.drop_number).padStart(3, '0')}</span>` },
+              { label: 'Left', align: 'right', render: r => `${num(r.left)} / ${num(r.edition_size)}` },
+              { label: 'Sold 24 h', align: 'right', render: r => num(r.sold_24h) }, { label: 'Sold 7 d', align: 'right', render: r => num(r.sold_7d) },
+              { label: 'Sells out in', align: 'right', render: r => eta(r.eta_hours) }], { empty: 'No live drops.' }),
+              { note: 'Uses the last 24 hours\' pace when there were sales, otherwise the last 7 days.' })}
+          ${card('Partner blanks', table(d.blanks, [
+              { label: 'Partner', render: r => `${esc(r.partner)}${r.is_test && !/test/i.test(r.partner) ? ' <span class="cc-tag">test</span>' : ''}` },
+              { label: 'Blank', render: r => `${esc(label(r.product_type))} · ${esc(r.color)} / ${esc(r.size)}` },
+              { label: 'Free', align: 'right', render: r => num(r.free) }, { label: 'Used / day', align: 'right', render: r => r.per_day },
+              { label: 'Runs out in', align: 'right', render: r => days(r.days_left) }], { empty: 'No production in this window.' }),
+              { note: 'Blanks used by production orders assigned to each partner.' })}
+        </div>`,
+      charts: [
+        ['demand', { rows: d.demand, x: r => r.week, xFormat: (k, long) => new Date(k + 'T12:00:00').toLocaleDateString('en-CA', long ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' }),
+          kind: 'column', height: 200, yFormat: (v) => num(Math.round(v)), series: [{ key: 'u', label: 'Items sold', value: r => r.units }] }],
+      ],
+      csv: () => toCsv([['product', r => r.product], ['sku', r => r.sku], ['color', r => r.color], ['size', r => r.size], ['available', r => r.available],
+        ['sold_in_window', r => r.sold], ['per_day', r => r.per_day], ['days_left', r => r.days_left], ['reorder_30d', r => r.reorder]], d.variants),
+    };
+  },
   sales(d, range) {
     const t = d.totals, p = d.previous;
     const margin = t.costed_net_cents ? t.costed_net_cents - t.cost_cents : null;
@@ -296,7 +346,7 @@ const TAB_VIEWS = {
           ${card('Print methods', barList(d.methods.map(r => ({ label: r.method, value: r.n })), { format: num, empty: 'No custom orders in this period.' }))}
           ${card('Garment colours', barList(d.colors.map(r => ({ label: r.color, value: r.n })), { format: num, empty: 'No custom orders in this period.' }))}
           ${card('Why designs were stopped', barList(d.moderation_reasons.map(r => ({ label: label(r.reason), value: r.n })), { format: num, empty: 'Nothing flagged.' }))}
-          ${card('AI designs', `<p class="an-big">${num(t.ai_designs)}</p>`, { note: 'AI design generation arrives in Phase 10; this counts once it is live.' })}
+          ${card('AI designs', `<p class="an-big">${num(t.ai_designs)}</p>`, { note: 'Artwork made with “Describe it” in this period. Details on the <a href="/admin/ai">AI page</a>.' })}
         </div>`,
       csv: () => toCsv([['step', r => r.step], ['people', r => r.n]], d.funnel),
     };

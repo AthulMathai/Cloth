@@ -7,7 +7,7 @@ import { track } from '../lib/analytics.js';
 import { addDesignToBag } from '../lib/cart.js';
 import { webglAvailable } from '../three/studio.js';
 import {
-  loadCatalogue, placementsFor, areaGeometry, printSummary, readArtwork, uploadArtwork, renderMockup, renderProduction,
+  loadCatalogue, placementsFor, areaGeometry, printSummary, readArtwork, uploadArtwork, renderMockup, renderProduction, removeBackground,
   measureText, FONTS, TEXT_FONT_SIZE, UNITS_PER_INCH, viewOf, viewBoxFor, methodsFor, wrapPatternSVG,
 } from '../lib/designs.js';
 
@@ -90,6 +90,7 @@ function mountDesigner(root, cat, saved) {
     decision: saved?.decision_note || null,
     dirty: false, art: {}, history: [], future: [], zoom: 1, quote: null, tiers: null, busy: false, msg: '',
     mode: webglAvailable() ? (sessionStorage.getItem('dz-mode') || '3d') : '2d',
+    ai: { open: false, prompt: '', style: 'illustration', clearBg: true, busy: false, results: [], quota: null, error: '', testMode: false },
   };
   if (S.mode === 'tryon') S.mode = '3d';
   S.config.methods ||= {}; S.config.services ||= [];
@@ -281,10 +282,11 @@ function mountDesigner(root, cat, saved) {
     if (!ok) S.active = placements()[0].code;
     S.view = viewOf(pl(S.active));
   }
-  async function addImage(file) {
+  async function addImage(file, extra = {}) {
     ensureActiveInView();
     let art;
     try { art = await readArtwork(file); } catch (e) { flash(e.message); return; }
+    Object.assign(art, extra);
     const key = 'local:' + crypto.randomUUID();
     S.art[key] = art;
     const m = pl(S.active), ratio = art.width / art.height;
@@ -296,7 +298,89 @@ function mountDesigner(root, cat, saved) {
                 w_in: round2(w), h_in: round2(h), rotation: 0 };
     S.config.layers.push(l); S.selected = l.id;
     renderStage(); commit();
-    track('design_uploaded', { mime: file.type, bytes: file.size });
+    if (extra.generationId) track('ai_design_used', { style: extra.style || null });
+    else track('design_uploaded', { mime: file.type, bytes: file.size });
+  }
+
+  // ---------- AI: describe it, background removal ----------
+  const AI_STYLES = [['illustration', 'Illustration'], ['anime', 'Anime'], ['streetwear', 'Streetwear'], ['minimal', 'Line art'],
+                     ['vintage', 'Vintage'], ['photo', 'Photo'], ['none', 'No style']];
+  async function loadAiQuota() {
+    if (!auth.user) return;
+    const [quota, status] = await Promise.all([db.rpc('ai_my_quota').catch(() => null),
+      fetch('/api/ai-status').then(r => r.ok ? r.json() : null).catch(() => null)]);
+    S.ai.quota = quota; if (status) S.ai.testMode = status.test_mode;
+    renderPanel();
+  }
+  async function generateAi() {
+    const prompt = S.ai.prompt.trim();
+    if (prompt.length < 3) { S.ai.error = 'Describe what you want in a few words.'; renderPanel(); return; }
+    S.ai.busy = true; S.ai.error = ''; renderPanel();
+    track('ai_design_requested', { style: S.ai.style });
+    try {
+      const res = await fetch('/api/ai-generate', { method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${await auth.token()}` },
+        body: JSON.stringify({ prompt, style: S.ai.style }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'The AI couldn\'t make that one. Try again.');
+      S.ai.results.unshift({ ...data, prompt, style: S.ai.style });
+      S.ai.results = S.ai.results.slice(0, 6);
+      S.ai.testMode = data.test_mode;
+      if (S.ai.quota) S.ai.quota.left = data.left;
+    } catch (e) { S.ai.error = e.message; }
+    S.ai.busy = false; renderPanel();
+  }
+  async function useAiResult(i) {
+    const r = S.ai.results[i]; if (!r) return;
+    flash(S.ai.clearBg ? 'Removing the background…' : 'Adding artwork…');
+    try {
+      let blob = await fetch(r.url).then(x => { if (!x.ok) throw new Error('That image has expired. Generate it again.'); return x.blob(); });
+      if (!/^image\/(png|jpeg|webp)$/.test(blob.type)) blob = new Blob([blob], { type: r.mime || 'image/png' });
+      if (S.ai.clearBg) blob = (await removeBackground(blob).catch(() => null)) || blob;
+      const name = `AI: ${r.prompt}`.slice(0, 120) + '.png';
+      const file = new File([blob], name, { type: blob.type || r.mime });
+      await addImage(file, { generationId: r.generation_id, style: r.style });
+      flash('');
+    } catch (e) { flash(e.message); }
+  }
+  async function clearSelectedBackground() {
+    const l = layer(S.selected); if (!l || l.type !== 'image') return;
+    const a = S.art[l.asset_id || l.local];
+    if (!a || a.file?.type === 'image/svg+xml') { flash('Background removal works on PNG, JPG and WebP images.'); return; }
+    flash('Removing the background…');
+    try {
+      const blob = await removeBackground(a.url);
+      if (!blob) { flash('No plain background to remove: it\'s already transparent or has more than one colour.'); return; }
+      const art = await readArtwork(new File([blob], (a.name || 'artwork').replace(/\.\w+$/, '') + '-cutout.png', { type: 'image/png' }));
+      if (a.generationId) art.generationId = a.generationId;
+      const key = 'local:' + crypto.randomUUID();
+      S.art[key] = art; l.local = key; delete l.asset_id;
+      renderStage(); commit(); flash('Background removed. Undo brings it back.');
+      track('design_background_removed', {});
+    } catch (e) { flash(e.message); }
+  }
+  function aiPanelHTML() {
+    if (!S.ai.open) return '';
+    if (!auth.user) return `<div class="dz-ai"><p class="small">Sign in to create artwork from a description. Your design stays on this page.</p></div>`;
+    const q = S.ai.quota;
+    const off = q && !q.enabled;
+    return `<div class="dz-ai" aria-busy="${S.ai.busy}">
+      ${S.ai.testMode ? '<p class="dz-ai-test" role="note"><strong>Test mode.</strong> No AI provider is connected, so you\'ll get a placeholder pattern.</p>' : ''}
+      <label class="field"><span>Describe your design</span>
+        <textarea data-ai-prompt rows="3" maxlength="600" placeholder="A futuristic dragon wrapped around a Japanese moon">${esc(S.ai.prompt)}</textarea></label>
+      <div class="dz-ai-styles" role="radiogroup" aria-label="Style">${AI_STYLES.map(([v, t]) =>
+        `<button class="chip" role="radio" data-ai-style="${v}" aria-checked="${S.ai.style === v}">${t}</button>`).join('')}</div>
+      <label class="check small"><input type="checkbox" data-ai-clearbg ${S.ai.clearBg ? 'checked' : ''}><span>Remove the plain background when adding</span></label>
+      <div class="dz-ai-go">
+        <button class="btn" data-act="ai-generate" ${S.ai.busy || off || (q && q.left <= 0) ? 'disabled' : ''}>${S.ai.busy ? 'Creating…' : 'Generate'}</button>
+        <span class="small muted">${off ? 'AI design is paused right now.' : q ? `${q.left} of ${q.limit} left today` : ''}</span>
+      </div>
+      ${S.ai.error ? `<p class="small dz-warn" role="alert">${esc(S.ai.error)}</p>` : ''}
+      ${S.ai.results.length ? `<ul class="dz-ai-results">${S.ai.results.map((r, i) => `<li>
+          <img src="${esc(r.url)}" alt="${esc(r.prompt)}" loading="lazy">
+          <button class="btn btn--quiet btn--sm" data-ai-use="${i}">Use</button></li>`).join('')}</ul>
+        <p class="small muted">Generated art is checked like any upload when you submit. Don't describe brands, logos, characters or real people.</p>` : ''}
+    </div>`;
   }
   function addText() {
     ensureActiveInView();
@@ -453,7 +537,9 @@ function mountDesigner(root, cat, saved) {
         <div class="dz-add">
           <button class="btn" data-act="upload">Upload image</button>
           <button class="btn btn--quiet" data-act="text">Add text</button>
+          <button class="btn btn--quiet" data-act="ai" aria-expanded="${S.ai.open}">Describe it · AI</button>
         </div>
+        ${aiPanelHTML()}
         <p class="small muted">PNG, JPG, WebP or SVG up to 25 MB. Transparent PNGs print best. Adding to: <strong>${esc(pl(S.active)?.label || '')}</strong>.</p>
         ${S.config.layers.length ? `<ol class="dz-layers" aria-label="Layers, top first">${[...S.config.layers].reverse().map(l => `
           <li class="${S.selected === l.id ? 'is-on' : ''}">
@@ -471,7 +557,8 @@ function mountDesigner(root, cat, saved) {
           <label class="dz-range"><span>Size</span><input type="range" data-prop="width" min="0.5" step="0.1" max="${maxWidth(sel).toFixed(1)}" value="${sel.w_in}" aria-label="Artwork width in inches"></label>
           <div class="dz-readout"><span data-size-readout>${sel.w_in.toFixed(1)} × ${sel.h_in.toFixed(1)} in</span>
             <label>Rotate <input type="number" data-prop="rotation" min="0" max="359" value="${sel.rotation || 0}">°</label>
-            <button class="linklike" data-act="center">Center</button>${pl(sel.placement)?.canvas === 'wrap' ? '<button class="linklike" data-act="cover">Cover whole area</button>' : ''}</div>
+            <button class="linklike" data-act="center">Center</button>${pl(sel.placement)?.canvas === 'wrap' ? '<button class="linklike" data-act="cover">Cover whole area</button>' : ''}
+            ${sel.type === 'image' ? '<button class="linklike" data-act="clear-bg">Remove background</button>' : ''}</div>
           ${dpi ? `<p class="small ${dpi < 90 ? 'dz-warn' : dpi < 150 ? 'dz-caution' : 'muted'}">${dpi} DPI at this size${dpi < 90 ? ' — will print blurry. Make it smaller or use a bigger image.' : dpi < 150 ? ' — edges may look soft.' : ' — prints sharp.'}</p>` : ''}
         </div>` : ''}
       </section>
@@ -510,6 +597,12 @@ function mountDesigner(root, cat, saved) {
     else if (d.act === 'hood') { studio?.setHood(!studio.hood); renderMode(); }
     else if (d.act === 'upload') $('[data-file]').click();
     else if (d.act === 'text') addText();
+    else if (d.act === 'ai') { S.ai.open = !S.ai.open; renderPanel(); if (S.ai.open && !S.ai.quota) loadAiQuota();
+      if (S.ai.open) root.querySelector('[data-ai-prompt]')?.focus(); }
+    else if (d.act === 'ai-generate') generateAi();
+    else if (d.aiStyle) { S.ai.style = d.aiStyle; renderPanel(); }
+    else if (d.aiUse) useAiResult(Number(d.aiUse));
+    else if (d.act === 'clear-bg') clearSelectedBackground();
     else if (d.act === 'undo') undo();
     else if (d.act === 'redo') redo();
     else if (d.act === 'zoom-in') { if (S.mode === '3d' && studio) studio.zoom(0.82); else { S.zoom = Math.min(2.5, S.zoom + 0.25); renderStage(); } }
@@ -542,9 +635,11 @@ function mountDesigner(root, cat, saved) {
     else if (d.prop === 'rotation') { const l = layer(S.selected); l.rotation = ((Number(t.value) || 0) % 360 + 360) % 360; renderStage(); commit(); }
     else if (t.matches('[data-qty-input]')) setQty(Number(t.value));
     else if (t.matches('[data-file]')) { const f = t.files[0]; t.value = ''; if (f) addImage(f); }
+    else if (t.matches('[data-ai-clearbg]')) S.ai.clearBg = t.checked;
   });
   root.addEventListener('input', (e) => {
     const t = e.target;
+    if (t.matches('[data-ai-prompt]')) { S.ai.prompt = t.value; return; }
     if (t.dataset.prop === 'text') {
       const l = layer(S.selected); l.text = t.value || ' '; refitText(l);
       const el = root.querySelector(`[data-layer="${l.id}"] .dz-text`); if (el) el.textContent = l.text;
@@ -674,6 +769,7 @@ function mountDesigner(root, cat, saved) {
         const art = S.art[l.local];
         l.asset_id = await uploadArtwork(art);
         S.art[l.asset_id] = art; delete l.local;
+        if (art.generationId) db.rpc('ai_attach', { p_generation: art.generationId, p_asset: l.asset_id }).catch(() => {});
       }
     }
     flash('Rendering previews…');

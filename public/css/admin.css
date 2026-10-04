@@ -403,3 +403,15 @@ pre.cc-mono { white-space: pre-wrap; max-height: 260px; overflow: auto; backgrou
 @media (max-width: 1100px) { .an-grid { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { .ch-bars li { grid-template-columns: 1fr auto; } .ch-bars-track { grid-column: 1 / -1; grid-row: 2; } }
 .ch-tip[hidden] { display: none; }
+
+/* AI */
+.cc-note--warn { background: var(--ad-warn-bg); color: #4a3a12; }
+.cc-note + .cc-kpis, .cc-head + .cc-note { margin-bottom: 16px; }
+.ai-settings { display: grid; gap: 14px; max-width: 420px; }
+.ai-settings .cc-btn { justify-self: start; }
+.cc-list { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 14px; }
+.ai-thumb { display: block; width: 48px; height: 48px; object-fit: contain; background: #fff; border: 1px solid var(--ad-line, #e4e2dc); border-radius: 6px; }
+.ai-thumb--none { background: var(--ad-mute-bg); }
+.ai-settings .cc-check { flex-wrap: nowrap; align-items: flex-start; }
+.ai-settings .cc-check input { margin-top: 2px; }
+.ai-desc { display: inline-block; min-width: 240px; }
