@@ -68,6 +68,9 @@ async function navigate(url, { push = true, initial = false } = {}) {
     currentThemeSlug = page.theme.slug;
     document.title = page.title ? `${page.title} — ${storeName}` : storeName;
     setMeta('description', page.description || '');
+    if (!initial) document.querySelectorAll('script[data-seo], meta[name="robots"]').forEach(el => el.remove());   // server-added data was for the first page only
+    document.querySelector('meta[property="og:title"]')?.setAttribute('content', page.title || storeName);
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', (env.SITE_URL || location.origin) + u.pathname);
     document.querySelector('link[rel="canonical"]')?.setAttribute('href', (env.SITE_URL || location.origin) + u.pathname);
     document.body.classList.toggle('is-admin', /^\/(admin|partner)(\/|$)/.test(u.pathname));
     main.innerHTML = page.html;
